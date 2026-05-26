@@ -2,7 +2,55 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Shipper VN — Prototype v2</title>
+
+<style>
+/* ── Portrait-mode rotation prompt ── */
+#rotate-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #0a0a14;
+  z-index: 999999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  color: #eee;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+  padding: 20px;
+}
+#rotate-overlay .rot-icon {
+  font-size: 72px;
+  animation: rotatePhone 1.8s ease-in-out infinite;
+}
+@keyframes rotatePhone {
+  0%   { transform: rotate(0deg);   }
+  30%  { transform: rotate(0deg);   }
+  60%  { transform: rotate(-90deg); }
+  100% { transform: rotate(-90deg); }
+}
+#rotate-overlay .rot-title {
+  font-size: 18px;
+  color: #f5c542;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+}
+#rotate-overlay .rot-sub {
+  font-size: 13px;
+  color: #888;
+  max-width: 260px;
+  line-height: 1.6;
+}
+@media (orientation: portrait) and (pointer: coarse) {
+  #rotate-overlay { display: flex; }
+}
+</style>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{margin:0;padding:0;background:#0a0a14;display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden}
@@ -461,6 +509,14 @@ body{margin:0;padding:0;background:#0a0a14;display:flex;align-items:center;justi
 </style>
 </head>
 <body>
+
+<!-- Portrait-mode overlay — shown automatically via CSS media query -->
+<div id="rotate-overlay">
+  <div class="rot-icon">📱</div>
+  <div class="rot-title">XOAY MÀN HÌNH</div>
+  <div class="rot-sub">Game này được thiết kế cho màn hình ngang.<br>Vui lòng xoay điện thoại sang chế độ <strong style="color:#f5c542">Landscape</strong>.</div>
+</div>
+
 <div id="game">
 
 <!-- ========== HUD ========== -->
