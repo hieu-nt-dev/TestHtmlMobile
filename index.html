@@ -3671,5 +3671,283 @@ checkDeliverReady=function(){
 console.log('[menu-v2] loaded');
 
 </script>
+
+<!-- =====================================================================
+     TOUCH DRAG-AND-DROP POLYFILL
+     Translates touch events into the HTML5 drag events the game uses,
+     and also patches the mouse-only box-repositioning logic.
+     ===================================================================== -->
+<script>
+(function(){
+'use strict';
+
+/* ── Ghost element that follows the finger ── */
+let ghost=null;
+function createGhost(src, touchX, touchY){
+  removeGhost();
+  ghost=src.cloneNode(true);
+  ghost.style.cssText=[
+    'position:fixed','z-index:99999','pointer-events:none',
+    'opacity:0.65','transform:scale(1.08)','transition:none',
+    'left:0','top:0','margin:0'
+  ].join(';');
+  // Size it to match the original
+  const r=src.getBoundingClientRect();
+  ghost.style.width=r.width+'px';
+  ghost.style.height=r.height+'px';
+  document.body.appendChild(ghost);
+  moveGhost(touchX, touchY, r);
+}
+function moveGhost(touchX, touchY, origRect){
+  if(!ghost) return;
+  const r=origRect||ghost.getBoundingClientRect();
+  ghost.style.left=(touchX - r.width/2)+'px';
+  ghost.style.top =(touchY - r.height/2)+'px';
+}
+function removeGhost(){
+  if(ghost){ghost.remove();ghost=null;}
+}
+
+/* ── Helpers to fire synthetic drag events ── */
+function fireEvent(el, type, extra){
+  const ev=new MouseEvent(type,{bubbles:true,cancelable:true,
+    clientX:extra.clientX||0, clientY:extra.clientY||0});
+  // Attach dataTransfer stub so handlers don't crash
+  Object.defineProperty(ev,'dataTransfer',{value:{
+    effectAllowed:'move', dropEffect:'move',
+    setData:()=>{}, getData:()=>''
+  }});
+  if(extra.stopProp) ev.stopPropagation=()=>{};
+  el.dispatchEvent(ev);
+  return ev;
+}
+
+/* ── State ── */
+let touchDragging=false;
+let touchSrc=null;      // element where touchstart began
+let lastDropTarget=null;// element that received last dragover
+let touchStartX=0, touchStartY=0;
+let touchOrigRect=null;
+
+const DRAG_THRESHOLD=8; // px before drag starts
+
+/* ── Find the real interactive element under a point ──
+   We hide the ghost, hit-test, then restore. */
+function elementFromPoint(x,y){
+  if(ghost) ghost.style.display='none';
+  const el=document.elementFromPoint(x,y);
+  if(ghost) ghost.style.display='';
+  return el;
+}
+
+/* ── Walk up from el to find a draggable ancestor ── */
+function findDraggable(el){
+  let cur=el;
+  while(cur && cur!==document.body){
+    if(cur.draggable) return cur;
+    cur=cur.parentElement;
+  }
+  return null;
+}
+
+/* ── Walk up from el to find titlebar for box repositioning ── */
+function findTitlebar(el){
+  let cur=el;
+  while(cur && cur!==document.body){
+    if(cur.classList && cur.classList.contains('sb-titlebar')) return cur;
+    cur=cur.parentElement;
+  }
+  return null;
+}
+
+/* ── Box-reposition touch support ── */
+let tbTouch=null; // {sp, offX, offY}
+let tbTouchMoved=false;
+
+document.addEventListener('touchstart', function(e){
+  const touch=e.touches[0];
+  const tb=findTitlebar(touch.target);
+  if(tb && !touch.target.classList.contains('sb-close')){
+    const sp=window._spawnedBoxes && window._spawnedBoxes.find(s=>String(s.spawnId)===tb.dataset.sp);
+    if(!sp){
+      // Try getting sp from the dataset on the titlebar
+      const spawnId=tb.dataset.sp;
+      const section=document.getElementById('boxes-section');
+      if(section && spawnId){
+        // defer to global S
+        const win=document.getElementById('sbw-'+spawnId);
+        if(win){
+          const rect=section.getBoundingClientRect();
+          const currentX=parseFloat(win.style.left)||0;
+          const currentY=parseFloat(win.style.top)||0;
+          tbTouch={win, offX:touch.clientX-rect.left-currentX, offY:touch.clientY-rect.top-currentY, spawnId};
+          tbTouchMoved=false;
+        }
+      }
+    }
+  }
+},{passive:true});
+
+document.addEventListener('touchmove', function(e){
+  if(!tbTouch) return;
+  tbTouchMoved=true;
+  const touch=e.touches[0];
+  const section=document.getElementById('boxes-section');
+  if(!section) return;
+  const rect=section.getBoundingClientRect();
+  const x=Math.max(0, Math.min(section.clientWidth-160, touch.clientX-rect.left-tbTouch.offX));
+  const y=Math.max(0, Math.min(section.clientHeight-100, touch.clientY-rect.top-tbTouch.offY));
+  tbTouch.win.style.left=x+'px';
+  tbTouch.win.style.top=y+'px';
+  // also update S.spawnedBoxes position
+  if(typeof S!=='undefined' && S.spawnedBoxes){
+    const sp=S.spawnedBoxes.find(b=>String(b.spawnId)===tbTouch.spawnId);
+    if(sp){sp.x=x;sp.y=y;}
+  }
+  e.preventDefault();
+},{passive:false});
+
+document.addEventListener('touchend', function(){
+  tbTouch=null;
+},{passive:true});
+
+/* ── Main touch → drag polyfill ── */
+document.addEventListener('touchstart', function(e){
+  const touch=e.touches[0];
+  // Don't intercept titlebar (handled above) or buttons/inputs
+  const tag=touch.target.tagName;
+  if(tag==='BUTTON'||tag==='INPUT'||tag==='SELECT') return;
+  if(findTitlebar(touch.target)) return;
+
+  const draggable=findDraggable(touch.target);
+  if(!draggable) return;
+
+  touchSrc=draggable;
+  touchStartX=touch.clientX;
+  touchStartY=touch.clientY;
+  touchOrigRect=draggable.getBoundingClientRect();
+  touchDragging=false;
+  lastDropTarget=null;
+},{passive:true});
+
+document.addEventListener('touchmove', function(e){
+  if(!touchSrc) return;
+  const touch=e.touches[0];
+  const dx=touch.clientX-touchStartX;
+  const dy=touch.clientY-touchStartY;
+
+  if(!touchDragging){
+    if(Math.abs(dx)<DRAG_THRESHOLD && Math.abs(dy)<DRAG_THRESHOLD) return;
+    // Start drag
+    touchDragging=true;
+    createGhost(touchSrc, touch.clientX, touch.clientY);
+    // Fire dragstart
+    fireEvent(touchSrc,'dragstart',{clientX:touch.clientX,clientY:touch.clientY});
+    touchSrc.classList.add('dragging');
+  }
+
+  e.preventDefault(); // prevent scroll while dragging
+  moveGhost(touch.clientX, touch.clientY, touchOrigRect);
+
+  // Find element under finger
+  const target=elementFromPoint(touch.clientX, touch.clientY);
+
+  if(target && target!==lastDropTarget){
+    if(lastDropTarget){
+      fireEvent(lastDropTarget,'dragleave',{clientX:touch.clientX,clientY:touch.clientY});
+      lastDropTarget.classList.remove('drag-over-shelf','drag-over-row','drag-over','drag-invalid');
+    }
+    if(target!==touchSrc){
+      fireEvent(target,'dragover',{clientX:touch.clientX,clientY:touch.clientY});
+    }
+    lastDropTarget=target;
+  } else if(target && target===lastDropTarget){
+    // Re-fire dragover so preview refreshes on the same cell
+    fireEvent(target,'dragover',{clientX:touch.clientX,clientY:touch.clientY});
+  }
+},{passive:false});
+
+document.addEventListener('touchend', function(e){
+  if(!touchSrc || !touchDragging){
+    touchSrc=null; touchDragging=false;
+    return;
+  }
+  const touch=e.changedTouches[0];
+  const target=elementFromPoint(touch.clientX, touch.clientY);
+
+  removeGhost();
+  touchSrc.classList.remove('dragging');
+
+  if(lastDropTarget){
+    fireEvent(lastDropTarget,'dragleave',{clientX:touch.clientX,clientY:touch.clientY});
+    lastDropTarget.classList.remove('drag-over-shelf','drag-over-row','drag-over','drag-invalid');
+  }
+
+  if(target){
+    fireEvent(target,'drop',{clientX:touch.clientX,clientY:touch.clientY});
+  }
+  fireEvent(touchSrc,'dragend',{clientX:touch.clientX,clientY:touch.clientY});
+
+  touchSrc=null; touchDragging=false; lastDropTarget=null;
+},{passive:true});
+
+document.addEventListener('touchcancel', function(){
+  removeGhost();
+  if(touchSrc) touchSrc.classList.remove('dragging');
+  if(lastDropTarget) lastDropTarget.classList.remove('drag-over-shelf','drag-over-row','drag-over','drag-invalid');
+  touchSrc=null; touchDragging=false; lastDropTarget=null; tbTouch=null;
+},{passive:true});
+
+/* ── Context-menu (right-click) → long-press for rotation ── */
+let longPressTimer=null;
+let longPressSrc=null;
+
+document.addEventListener('touchstart', function(e){
+  if(e.touches.length!==1) return;
+  const el=e.touches[0].target;
+  // Only attach to elements that have contextmenu listeners (deco, mat-cell, shelf-piece)
+  const hasCtx=el.closest('.deco-occupied,.mat-cell.occupied,.item-piece');
+  if(!hasCtx) return;
+  longPressSrc=hasCtx;
+  longPressTimer=setTimeout(()=>{
+    longPressSrc.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}));
+    longPressSrc=null;
+  }, 600);
+},{passive:true});
+
+document.addEventListener('touchend', function(){
+  clearTimeout(longPressTimer); longPressTimer=null;
+},{passive:true});
+document.addEventListener('touchmove', function(){
+  clearTimeout(longPressTimer); longPressTimer=null;
+},{passive:true});
+
+/* ── Mobile CSS tweaks injected at runtime ── */
+const style=document.createElement('style');
+style.textContent=`
+  /* Prevent text selection during touch drag */
+  .deco-item, .mat-cell.occupied, .item-piece, .pack-supply-pill,
+  .grid-box, .spawned-box, .deco-occupied {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: none;
+  }
+  /* Make tap targets comfortably large on mobile */
+  @media (pointer: coarse) {
+    .home-tab { padding: 14px 8px; font-size: 12px; }
+    .mat-cat-tab { padding: 8px 10px; font-size: 11px; }
+    .flap-btn { padding: 6px 10px; font-size: 11px; }
+    .numpad-btn { padding: 14px; font-size: 16px; }
+    .btn-primary, .btn-secondary { padding: 12px 18px; font-size: 13px; }
+    .remove-box-btn { width: 20px; height: 20px; font-size: 12px; top: -8px; right: -8px; }
+    /* Hint text update */
+    .hint-text::after { content: ' | Giữ ngón tay = xoay'; }
+  }
+`;
+document.head.appendChild(style);
+
+console.log('[touch-dnd] polyfill loaded');
+})();
+</script>
 </body>
 </html>
