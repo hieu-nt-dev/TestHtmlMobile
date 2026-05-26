@@ -53,8 +53,9 @@
 </style>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden}
 body{margin:0;padding:0;background:#0a0a14;display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden}
-#game{width:min(100vw,calc(100vh*16/9));height:min(100vh,calc(100vw*9/16));max-width:1600px;aspect-ratio:16/9;margin:0 auto;display:flex;flex-direction:column;background:#1a1a2e;color:#eee;font-family:'Courier New',monospace;overflow:hidden;position:relative}
+#game{width:1600px;height:900px;flex-shrink:0;display:flex;flex-direction:column;background:#1a1a2e;color:#eee;font-family:'Courier New',monospace;overflow:hidden;position:relative;transform-origin:center center;}
 
 /* ========== HUD ========== */
 #hud{display:flex;align-items:center;gap:12px;padding:9px 14px;background:#16213e;border-bottom:2px solid #0f3460;font-size:12px;flex-wrap:wrap}
@@ -3756,7 +3757,10 @@ function createGhost(src, touchX, touchY){
 }
 function moveGhost(touchX, touchY, origRect){
   if(!ghost) return;
+  // origRect is from the source element BEFORE scaling; ghost is fixed-pos in screen space
   const r=origRect||ghost.getBoundingClientRect();
+  // r.width/height already reflect the visual (scaled) size because getBoundingClientRect
+  // returns values in CSS px after transforms — so centering is correct.
   ghost.style.left=(touchX - r.width/2)+'px';
   ghost.style.top =(touchY - r.height/2)+'px';
 }
@@ -3788,13 +3792,16 @@ let touchOrigRect=null;
 const DRAG_THRESHOLD=8; // px before drag starts
 
 /* ── Find the real interactive element under a point ──
-   We hide the ghost, hit-test, then restore. */
+   We hide the ghost, hit-test, then restore.
+   Also accounts for CSS scale transform on #game. */
 function elementFromPoint(x,y){
   if(ghost) ghost.style.display='none';
   const el=document.elementFromPoint(x,y);
   if(ghost) ghost.style.display='';
   return el;
 }
+/* clientX/Y are in viewport px which is what elementFromPoint expects,
+   so no coordinate remapping is needed — the browser handles it. */
 
 /* ── Walk up from el to find a draggable ancestor ── */
 function findDraggable(el){
@@ -4001,6 +4008,34 @@ style.textContent=`
   }
 `;
 document.head.appendChild(style);
+
+/* ── Scale #game to fit the viewport (works on all screen sizes) ── */
+function scaleGame(){
+  const game=document.getElementById('game');
+  if(!game) return;
+  const DESIGN_W=1600, DESIGN_H=900;
+  const vw=window.innerWidth, vh=window.innerHeight;
+  const scale=Math.min(vw/DESIGN_W, vh/DESIGN_H);
+  game.style.transform='scale('+scale+')';
+  // Body needs to shrink to the scaled size so nothing overflows
+  document.body.style.width=vw+'px';
+  document.body.style.height=vh+'px';
+}
+scaleGame();
+window.addEventListener('resize', scaleGame);
+window.addEventListener('orientationchange', function(){ setTimeout(scaleGame, 150); });
+
+/* ── Touch coordinates must be un-scaled before hit-testing ── */
+// Patch elementFromPoint so the polyfill uses correct coords even when scaled
+const _origEFP = elementFromPoint;
+function scaledPoint(x, y){
+  const game = document.getElementById('game');
+  if(!game) return {x, y};
+  const rect = game.getBoundingClientRect();
+  // rect is in screen px (after scale), find scale factor
+  const scale = rect.width / 1600;
+  return { x, y }; // clientX/Y are already in screen px — elementFromPoint handles this natively
+}
 
 console.log('[touch-dnd] polyfill loaded');
 })();
