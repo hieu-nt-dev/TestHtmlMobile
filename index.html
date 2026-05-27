@@ -2,119 +2,132 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Tài Xế Ký Tài — Packing Prototype</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width:100%; height:100%; }
+html {
+  width: 100%; height: 100%;
+  /* Fill safe area on notched phones */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
 body {
+  width: 100%; height: 100%;
   background: #0a0a14;
-  display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; overflow: hidden;
+  display: flex; align-items: stretch; justify-content: stretch;
+  overflow: hidden;
   font-family: 'Courier New', monospace;
   color: #eee;
+  /* Use dvh so mobile browser chrome doesn't shrink the view */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
-/* ── GAME CONTAINER: 48 × 27 grid (16:9 aspect) ─────────── */
+/* ── GAME CONTAINER: fills entire viewport, 16:9 content inside ── */
 #game {
-  /* Outer keeps aspect ratio 48:27 = 16:9 */
   --cols: 48;
   --rows: 27;
-  width: min(98vw, calc(98vh * 48/27));
-  height: min(98vh, calc(98vw * 27/48));
+  /* Stretch to fill the full viewport */
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
   background: #1a1a2e;
   position: relative;
   display: grid;
   grid-template-columns: repeat(var(--cols), 1fr);
   grid-template-rows: repeat(var(--rows), 1fr);
-  gap: 2px;
-  padding: 8px;
+  gap: clamp(1px, 0.25vh, 3px);
+  padding: clamp(3px, 0.8vh, 10px);
   overflow: hidden;
 }
 
 /* Cell helper: each region uses grid-column / grid-row to place */
 .region {
   position: relative;
-  border-radius: 6px;
+  border-radius: 0.8vh;
   display: flex; align-items: center; justify-content: center;
-  font-size: clamp(8px, 0.9vw, 14px);
+  font-size: clamp(6px, 1.1vh, 14px);
   user-select: none;
   overflow: hidden;
 }
 
 /* Region styles by kind */
-.r-items     { background: rgba(13,27,46,.5); border: 1px dashed #2a5a9e; }
-.r-pack      { background: rgba(13,27,46,.4); border: 1px dashed #3a4a6e; padding: 4px; }
-.r-sticker   { background: #1a3056; border: 2px solid #2a5a9e; cursor: grab; transition: transform .1s, border-color .1s; }
+.r-items     { background: rgba(13,27,46,.5); border: 0.15vh dashed #2a5a9e; }
+.r-pack      { background: rgba(13,27,46,.4); border: 0.15vh dashed #3a4a6e; padding: 0.5vh; }
+.r-sticker   { background: #1a3056; border: 0.25vh solid #2a5a9e; cursor: grab; transition: transform .1s, border-color .1s; }
 .r-sticker:hover { border-color: #f5c542; transform: scale(1.04); }
 .r-sticker.dragging { opacity: .5; }
 .r-sticker.disabled { opacity: .4; cursor: not-allowed; }
 
 .r-foam, .r-bubble, .r-address {
-  background: #1a3a56; border: 2px solid #2a5a9e; cursor: grab;
+  background: #1a3a56; border: 0.25vh solid #2a5a9e; cursor: grab;
   transition: transform .1s, border-color .1s;
 }
 .r-foam:hover, .r-bubble:hover, .r-address:hover { border-color: #f5c542; transform: scale(1.04); }
 .r-foam.dragging, .r-bubble.dragging, .r-address.dragging { opacity: .5; }
 
 .r-tape {
-  background: #5a3a10; border: 2px solid #c87030; cursor: grab;
+  background: #5a3a10; border: 0.25vh solid #c87030; cursor: grab;
   transition: transform .1s, border-color .1s;
   display: flex; align-items: center; justify-content: center;
-  font-size: clamp(14px, 1.6vw, 22px);
+  font-size: clamp(10px, 2vh, 22px);
 }
 .r-tape:hover { border-color: #f5c542; transform: scale(1.04); }
 .r-tape.dragging { opacity: .5; }
 
 .r-printer   {
   background: linear-gradient(180deg, #0f3a5a, #16213e);
-  border: 3px solid #f5c542;
+  border: 0.35vh solid #f5c542;
   cursor: pointer;
   transition: transform .1s;
   display: flex; align-items: center; justify-content: center;
   flex-direction: column;
-  font-size: clamp(10px, 1vw, 14px);
+  font-size: clamp(8px, 1.2vh, 14px);
 }
 .r-printer:hover { transform: scale(1.03); border-color: #fff; }
 .r-printer:active { transform: scale(.97); }
 
 .r-shredder  {
-  background: #2a1a1a; border: 2px solid #5a3030;
+  background: #2a1a1a; border: 0.25vh solid #5a3030;
   cursor: not-allowed; opacity: .55;
   display: flex; align-items: center; justify-content: center;
   flex-direction: column;
 }
 .r-scanner   {
   background: linear-gradient(135deg, #1a3a5e, #0a1a3a);
-  border: 2px solid #2a5a9e; opacity: .65;
+  border: 0.25vh solid #2a5a9e; opacity: .65;
   display: flex; align-items: center; justify-content: center;
   flex-direction: column;
 }
 .r-trash     {
-  background: #2a1a2a; border: 2px dashed #6a3a6a;
+  background: #2a1a2a; border: 0.25vh dashed #6a3a6a;
   cursor: pointer; opacity: .6;
   display: flex; align-items: center; justify-content: center;
 }
 .r-trash.drag-over { opacity: 1; border-color: #e74c3c; background: #4a1a2a; }
 
 .r-box-pick  {
-  background: #2a1a4a; border: 2px solid #4a3a8a; cursor: grab;
+  background: #2a1a4a; border: 0.25vh solid #4a3a8a; cursor: grab;
   transition: transform .1s, border-color .1s;
   display: flex; align-items: center; justify-content: center;
-  flex-direction: column; gap: 2px;
-  padding: 3px;
+  flex-direction: column; gap: 0.3vh;
+  padding: 0.4vh;
 }
 .r-box-pick:hover { border-color: #f5c542; transform: scale(1.03); }
 .r-box-pick.empty { opacity: .3; cursor: not-allowed; }
 
 .r-bike-area {
   background: linear-gradient(135deg, #2a2a3a, #1a1a2a);
-  border: 2px solid #3a3a4e;
+  border: 0.25vh solid #3a3a4e;
   display: flex; align-items: center; justify-content: center;
   position: relative;
 }
 .r-bike-rear, .r-bike-front {
   background: rgba(13,27,46,.6);
-  border: 1px dashed #4a5a7e;
+  border: 0.12vh dashed #4a5a7e;
   z-index: 5;
 }
 .r-bike-rear.drag-target, .r-bike-front.drag-target {
@@ -122,22 +135,22 @@ body {
 }
 
 /* Stickers: only icon, no text */
-.sticker-icon { font-size: clamp(18px, 2.2vw, 36px); }
+.sticker-icon { font-size: clamp(10px, 3vh, 36px); }
 .sticker-qty {
-  position: absolute; bottom: 2px; right: 4px;
-  font-size: clamp(8px, 0.7vw, 11px); color: #2ecc71; font-weight: 700;
-  background: rgba(0,0,0,.5); padding: 0 4px; border-radius: 3px;
+  position: absolute; bottom: 0.3vh; right: 0.5vh;
+  font-size: clamp(6px, 1vh, 11px); color: #2ecc71; font-weight: 700;
+  background: rgba(0,0,0,.5); padding: 0 0.4vh; border-radius: 0.3vh;
 }
 .sticker-qty.zero { color: #555; }
 
 /* Box pick preview */
 .bp-prev {
-  display: grid; gap: 1px; padding: 1px; background: #0a0f1a; border-radius: 2px;
+  display: grid; gap: 1px; padding: 1px; background: #0a0f1a; border-radius: 0.3vh;
   width: 70%; aspect-ratio: 1;
 }
 .bp-prev > div { background: #6a8aff; border-radius: 1px; }
-.bp-label { font-size: clamp(8px, 0.7vw, 10px); color: #ccc; font-weight: 700; }
-.bp-qty { font-size: clamp(9px, 0.8vw, 12px); color: #2ecc71; font-weight: 800; }
+.bp-label { font-size: clamp(6px, 1vh, 10px); color: #ccc; font-weight: 700; }
+.bp-qty { font-size: clamp(7px, 1.1vh, 12px); color: #2ecc71; font-weight: 800; }
 
 /* Tetris piece shapes — in shelf */
 .shelf-piece {
@@ -151,7 +164,7 @@ body {
 .shelf-piece:hover { filter: brightness(1.2); }
 .shelf-piece.dragging { opacity: .35; }
 .tcell {
-  border-radius: 2px;
+  border-radius: 0.3vh;
   display: flex; align-items: center; justify-content: center;
   font-weight: 700;
 }
@@ -160,9 +173,9 @@ body {
 .spawn-box {
   position: absolute;
   background: #2a1a4a;
-  border: 2px solid #c87030;
-  border-radius: 6px;
-  box-shadow: 0 3px 10px rgba(0,0,0,.6);
+  border: 0.25vh solid #c87030;
+  border-radius: 0.8vh;
+  box-shadow: 0 0.4vh 1.2vh rgba(0,0,0,.6);
   display: flex; flex-direction: column;
   overflow: hidden;
   z-index: 10;
@@ -172,39 +185,39 @@ body {
 
 .sb-bar {
   background: #3a2010;
-  padding: 2px 4px;
-  display: flex; align-items: center; gap: 4px;
+  padding: 0.3vh 0.6vh;
+  display: flex; align-items: center; gap: 0.5vh;
   cursor: grab; user-select: none;
-  font-size: clamp(8px, 0.65vw, 10px);
+  font-size: clamp(6px, 1vh, 10px);
 }
 .sb-bar:active { cursor: grabbing; }
 .sb-title { color: #f0c898; font-weight: 700; flex: 1; }
 .sb-x {
-  width: clamp(12px, 1.1vw, 16px);
-  height: clamp(12px, 1.1vw, 16px);
+  width: clamp(10px, 1.8vh, 18px);
+  height: clamp(10px, 1.8vh, 18px);
   border-radius: 50%;
   background: rgba(0,0,0,.3);
   color: #c08050;
-  font-size: clamp(7px, 0.6vw, 10px);
+  font-size: clamp(6px, 1vh, 10px);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
 }
 .sb-x:hover { background: #e74c3c; color: #fff; }
-.sb-body { padding: 3px; display: flex; flex-direction: column; gap: 2px; align-items: center; }
+.sb-body { padding: 0.4vh; display: flex; flex-direction: column; gap: 0.3vh; align-items: center; }
 .sb-status {
-  font-size: clamp(7px, 0.6vw, 9px);
+  font-size: clamp(6px, 0.9vh, 9px);
   font-weight: 700; letter-spacing: .3px;
   text-align: center;
 }
-.sb-owner { font-size: clamp(7px, 0.55vw, 9px); color: #aaa; }
-.sb-stickers { font-size: clamp(8px, 0.7vw, 11px); }
+.sb-owner { font-size: clamp(6px, 0.85vh, 9px); color: #aaa; }
+.sb-stickers { font-size: clamp(7px, 1.1vh, 11px); }
 
 /* Grid (inside spawned box) */
 .grid-container { display: grid; gap: 1px; background: transparent; }
 .grid-cell {
   background: #0a1525;
-  border: 1px solid #1a3a6e;
-  border-radius: 2px;
+  border: 0.12vh solid #1a3a6e;
+  border-radius: 0.3vh;
   position: relative;
   display: flex; align-items: center; justify-content: center;
   transition: background .1s;
@@ -216,8 +229,8 @@ body {
 .cell-item {
   position: absolute;
   inset: 1px;
-  border-radius: 2px;
-  font-size: clamp(8px, 0.8vw, 13px);
+  border-radius: 0.3vh;
+  font-size: clamp(6px, 1.1vh, 13px);
   display: flex; align-items: center; justify-content: center;
   font-weight: 700;
   cursor: pointer;
@@ -229,17 +242,17 @@ body {
 .sticky-note {
   position: absolute;
   background: #fbeb6a;
-  border-radius: 2px 2px 2px 12px;
-  box-shadow: 4px 5px 14px rgba(0,0,0,.5), 1px 1px 0 #d4c840;
+  border-radius: 0.3vh 0.3vh 0.3vh 1.5vh;
+  box-shadow: 0.5vh 0.6vh 1.8vh rgba(0,0,0,.5), 1px 1px 0 #d4c840;
   overflow: hidden;
   z-index: 50;
   cursor: default;
-  font-size: clamp(8px, 0.75vw, 12px);
+  font-size: clamp(6px, 1.1vh, 12px);
 }
 .sn-header {
   background: #e8d840;
-  padding: clamp(3px, 0.4vw, 6px) clamp(4px, 0.5vw, 8px);
-  display: flex; align-items: center; gap: 4px;
+  padding: clamp(2px, 0.5vh, 6px) clamp(3px, 0.7vh, 8px);
+  display: flex; align-items: center; gap: 0.5vh;
   cursor: grab;
   user-select: none;
   font-weight: 800;
@@ -247,58 +260,58 @@ body {
 }
 .sn-header:active { cursor: grabbing; }
 .sn-code {
-  flex: 1; letter-spacing: 1px;
-  font-size: clamp(9px, 0.85vw, 13px);
+  flex: 1; letter-spacing: 0.1vh;
+  font-size: clamp(7px, 1.2vh, 13px);
   font-family: 'Courier New', monospace;
 }
 .sn-close {
-  width: clamp(14px, 1.2vw, 18px);
-  height: clamp(14px, 1.2vw, 18px);
+  width: clamp(12px, 2vh, 18px);
+  height: clamp(12px, 2vh, 18px);
   border-radius: 50%;
   background: rgba(0,0,0,.12);
   color: #5a4a00;
-  font-size: clamp(8px, 0.7vw, 11px);
+  font-size: clamp(7px, 1vh, 11px);
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
 }
 .sn-close:hover { background: rgba(180,0,0,.2); color: #800; }
-.sn-body { padding: clamp(4px, 0.5vw, 8px); }
+.sn-body { padding: clamp(3px, 0.6vh, 8px); }
 .sn-cust {
-  font-size: clamp(8px, 0.7vw, 10px);
+  font-size: clamp(6px, 1vh, 10px);
   color: #6a5a00;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 0.5vh;
 }
-.sn-addr { font-size: clamp(7px, 0.6vw, 9px); color: #8a7a00; margin-bottom: 6px; }
+.sn-addr { font-size: clamp(6px, 0.9vh, 9px); color: #8a7a00; margin-bottom: 0.7vh; }
 .sn-item {
-  display: flex; align-items: center; gap: 4px;
-  color: #3a3000; line-height: 1.6;
-  font-size: clamp(8px, 0.75vw, 11px);
+  display: flex; align-items: center; gap: 0.5vh;
+  color: #3a3000; line-height: 1.5;
+  font-size: clamp(6px, 1vh, 11px);
 }
-.sn-dot { width: 5px; height: 5px; border-radius: 50%; background: #b8a820; flex-shrink: 0; }
+.sn-dot { width: clamp(3px, 0.6vh, 5px); height: clamp(3px, 0.6vh, 5px); border-radius: 50%; background: #b8a820; flex-shrink: 0; }
 .sn-dot.packed { background: #2a8a20; }
 .sn-name.packed { text-decoration: line-through; opacity: .55; }
 .sn-check { color: #2a8a20; }
-.sn-progress { height: 3px; background: rgba(0,0,0,.1); }
+.sn-progress { height: clamp(2px, 0.4vh, 3px); background: rgba(0,0,0,.1); }
 .sn-progress-fill { height: 100%; background: #2a8a20; transition: width .3s; }
 .sn-loaded-badge {
   background: #2ecc71; color: #0a1a0a; font-weight: 800;
-  text-align: center; font-size: clamp(7px, 0.6vw, 10px);
-  letter-spacing: 1px; padding: 2px; margin: 4px 6px; border-radius: 3px;
+  text-align: center; font-size: clamp(6px, 0.9vh, 10px);
+  letter-spacing: 0.1vh; padding: 0.3vh; margin: 0.5vh 0.8vh; border-radius: 0.4vh;
 }
 
 /* Toast */
 #toast-wrap {
-  position: absolute; bottom: 16px; right: 16px;
-  display: flex; flex-direction: column; gap: 6px; align-items: flex-end;
+  position: absolute; bottom: 2vh; right: 1.5vw;
+  display: flex; flex-direction: column; gap: 0.8vh; align-items: flex-end;
   z-index: 1000; pointer-events: none;
 }
 .toast {
-  background: #16213e; border: 1px solid #2a5a9e;
-  border-radius: 6px; padding: 6px 12px;
-  font-size: clamp(9px, 0.8vw, 12px); color: #eee;
+  background: #16213e; border: 0.12vh solid #2a5a9e;
+  border-radius: 0.8vh; padding: 0.7vh 1.5vh;
+  font-size: clamp(7px, 1.2vh, 12px); color: #eee;
   animation: fadeT 3s ease forwards;
-  max-width: 260px;
+  max-width: 30vw;
   pointer-events: auto;
 }
 @keyframes fadeT { 0%{opacity:0;transform:translateY(10px)} 15%{opacity:1;transform:translateY(0)} 75%{opacity:1} 100%{opacity:0} }
@@ -311,175 +324,431 @@ body {
 }
 #numpad-overlay.hidden { display: none; }
 .numpad-box {
-  background: #16213e; border: 2px solid #f5c542; border-radius: 12px;
-  padding: 18px; width: 240px; position: relative;
+  background: #16213e; border: 0.25vh solid #f5c542; border-radius: 1.5vh;
+  padding: clamp(12px, 2.5vh, 22px); width: clamp(160px, 28vh, 300px); position: relative;
 }
 .numpad-close-btn {
-  position: absolute; top: 8px; right: 8px;
-  width: 24px; height: 24px; border-radius: 50%;
+  position: absolute; top: 1vh; right: 1vh;
+  width: clamp(18px, 3vh, 28px); height: clamp(18px, 3vh, 28px); border-radius: 50%;
   background: #e74c3c; color: #fff; border: none;
-  font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: inherit; font-size: clamp(10px, 1.6vh, 15px); font-weight: 700; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
 }
-.numpad-box h4 { font-size: 11px; color: #f5c542; letter-spacing: 1.5px; text-align: center; margin-bottom: 8px; }
-.numpad-display { font-size: 26px; font-weight: 800; text-align: center; color: #fff; letter-spacing: 8px; margin-bottom: 10px; min-height: 36px; }
-.numpad-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 6px; }
+.numpad-box h4 { font-size: clamp(8px, 1.3vh, 13px); color: #f5c542; letter-spacing: 0.2vh; text-align: center; margin-bottom: 1vh; }
+.numpad-display { font-size: clamp(20px, 4vh, 32px); font-weight: 800; text-align: center; color: #fff; letter-spacing: 1vh; margin-bottom: 1.2vh; min-height: clamp(28px, 5vh, 44px); }
+.numpad-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: clamp(4px, 0.8vh, 8px); }
 .numpad-btn {
-  background: #0f2040; border: 1px solid #1a4a8a; color: #fff;
-  font-family: inherit; font-size: 16px; font-weight: 700; border-radius: 6px;
-  padding: 10px; cursor: pointer; transition: background .1s;
+  background: #0f2040; border: 0.12vh solid #1a4a8a; color: #fff;
+  font-family: inherit; font-size: clamp(12px, 2vh, 20px); font-weight: 700; border-radius: 0.8vh;
+  padding: clamp(6px, 1.2vh, 14px); cursor: pointer; transition: background .1s;
 }
 .numpad-btn:hover { background: #1a4a8a; }
-.numpad-hint { font-size: 9px; color: #888; text-align: center; margin-top: 6px; }
+.numpad-hint { font-size: clamp(7px, 1vh, 10px); color: #888; text-align: center; margin-top: 0.8vh; }
 
 /* Win overlay */
 #win-overlay {
   position: absolute; inset: 0; background: rgba(0,0,0,.85);
   z-index: 3000; display: none;
   flex-direction: column; align-items: center; justify-content: center;
-  gap: 16px;
+  gap: 2vh;
 }
 #win-overlay.show { display: flex; }
-#win-overlay h2 { font-size: clamp(20px, 2.5vw, 36px); color: #f5c542; letter-spacing: 3px; }
-#win-overlay .win-stars { font-size: clamp(28px, 3.5vw, 48px); letter-spacing: 8px; }
-#win-overlay .win-earn { font-size: clamp(20px, 2.5vw, 32px); color: #2ecc71; font-weight: 800; }
+#win-overlay h2 { font-size: clamp(16px, 4vh, 36px); color: #f5c542; letter-spacing: 0.4vh; }
+#win-overlay .win-stars { font-size: clamp(24px, 5.5vh, 52px); letter-spacing: 1vh; }
+#win-overlay .win-earn { font-size: clamp(16px, 3.5vh, 32px); color: #2ecc71; font-weight: 800; }
 #win-overlay .win-btn {
-  background: #1a4a8a; border: 2px solid #2a5a9e; color: #fff;
-  font-family: inherit; font-size: 13px; font-weight: 700;
-  border-radius: 8px; padding: 12px 28px; cursor: pointer; letter-spacing: 1px;
+  background: #1a4a8a; border: 0.25vh solid #2a5a9e; color: #fff;
+  font-family: inherit; font-size: clamp(10px, 1.8vh, 15px); font-weight: 700;
+  border-radius: 1vh; padding: clamp(8px, 1.5vh, 14px) clamp(18px, 3.5vh, 32px);
+  cursor: pointer; letter-spacing: 0.15vh;
 }
 #win-overlay .win-btn:hover { background: #2a5a9e; }
 
 #header-info {
-  position: absolute; top: 6px; left: 50%;
+  position: absolute; top: 0.8vh; left: 50%;
   transform: translateX(-50%);
-  font-size: clamp(9px, 0.8vw, 13px);
-  color: #f5c542; font-weight: 700; letter-spacing: 1px;
+  font-size: clamp(7px, 1.3vh, 13px);
+  color: #f5c542; font-weight: 700; letter-spacing: 0.1vh;
   z-index: 100; pointer-events: none;
+  white-space: nowrap;
 }
 #deliver-btn {
-  position: absolute; bottom: 6px; left: 50%;
+  position: absolute; bottom: 0.8vh; left: 50%;
   transform: translateX(-50%);
-  background: #2c3e50; border: 2px solid #555;
+  background: #2c3e50; border: 0.25vh solid #555;
   color: #777; font-family: inherit; font-weight: 700;
-  font-size: clamp(10px, 0.9vw, 13px);
-  padding: 6px 24px; border-radius: 8px;
-  cursor: not-allowed; letter-spacing: 1px;
-  z-index: 100;
+  font-size: clamp(8px, 1.4vh, 13px);
+  padding: clamp(4px, 0.8vh, 8px) clamp(12px, 3vh, 28px);
+  border-radius: 1vh;
+  cursor: not-allowed; letter-spacing: 0.1vh;
+  z-index: 100; white-space: nowrap;
 }
 #deliver-btn.ready { background: #1a6a2a; border-color: #2ecc71; color: #fff; cursor: pointer; }
 #deliver-btn.ready:hover { background: #2ecc71; color: #0a1a0a; }
+
+/* ── CONFIG BUTTON & PANEL ──────────────────────────────── */
+#cfg-btn {
+  position: absolute;
+  top: 1vh; right: 1vw;
+  z-index: 500;
+  background: #16213e;
+  border: 0.2vh solid #2a5a9e;
+  color: #f5c542;
+  font-size: clamp(8px, 1.6vh, 15px);
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: .5px;
+  padding: 0.5vh 1.2vh;
+  border-radius: 0.8vh;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, transform .1s;
+  user-select: none;
+  display: flex; align-items: center; gap: 0.6vh;
+  white-space: nowrap;
+}
+#cfg-btn:hover { background: #1e2f50; border-color: #f5c542; transform: scale(1.04); }
+#cfg-btn:active { transform: scale(.97); }
+#cfg-btn .cfg-icon { font-style: normal; transition: transform .4s; }
+#cfg-btn.open .cfg-icon { transform: rotate(90deg); }
+
+#cfg-panel {
+  position: absolute;
+  top: 5vh; right: 1vw;
+  z-index: 499;
+  width: clamp(200px, 42vw, 520px);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: rgba(14, 22, 46, 0.97);
+  border: 0.2vh solid #2a5a9e;
+  border-radius: 1.4vh;
+  box-shadow: 0 1vh 5vh rgba(0,0,0,.85);
+  padding: 2vh 2.5vh 2.5vh;
+  font-family: 'Courier New', monospace;
+  color: #cde;
+  font-size: clamp(8px, 1.5vh, 16px);
+  display: none;
+  flex-direction: column;
+  gap: 1.8vh;
+  backdrop-filter: blur(10px);
+}
+#cfg-panel.visible { display: flex; }
+
+.cfg-title {
+  font-size: clamp(9px, 1.8vh, 20px);
+  font-weight: 800;
+  letter-spacing: 0.3vh;
+  color: #f5c542;
+  text-transform: uppercase;
+  margin-bottom: 0.4vh;
+  border-bottom: 0.1vh solid rgba(42,90,158,.5);
+  padding-bottom: 1vh;
+}
+
+.cfg-section-label {
+  font-size: clamp(7px, 1.2vh, 14px);
+  color: #7a9abe;
+  letter-spacing: 0.2vh;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 0.6vh;
+}
+
+.cfg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vh;
+}
+
+.cfg-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 1.2vh;
+}
+
+.cfg-slider-row label {
+  flex: 1;
+  font-size: clamp(7px, 1.4vh, 15px);
+  color: #bcd;
+  white-space: nowrap;
+}
+
+.cfg-slider-row .cfg-val {
+  min-width: 5vh;
+  text-align: right;
+  font-weight: 700;
+  color: #f5c542;
+  font-size: clamp(7px, 1.4vh, 15px);
+}
+
+.cfg-slider-row input[type=range] {
+  flex: 2;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 0.7vh;
+  border-radius: 0.4vh;
+  background: linear-gradient(to right, #2a5a9e var(--pct, 50%), #1a2a4e var(--pct, 50%));
+  outline: none;
+  cursor: pointer;
+}
+.cfg-slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 2.4vh; height: 2.4vh;
+  border-radius: 50%;
+  background: #f5c542;
+  border: 0.3vh solid #1a1a2e;
+  box-shadow: 0 0.2vh 0.8vh rgba(0,0,0,.6);
+  cursor: pointer;
+  transition: transform .1s;
+}
+.cfg-slider-row input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
+.cfg-slider-row input[type=range]:active::-webkit-slider-thumb { transform: scale(1.3); }
+
+.cfg-divider {
+  border: none;
+  border-top: 0.1vh solid rgba(42,90,158,.3);
+  margin: 0.2vh 0;
+}
+
+.cfg-reset {
+  align-self: flex-end;
+  background: transparent;
+  border: 0.2vh solid #3a5a8e;
+  color: #7a9abe;
+  font-family: 'Courier New', monospace;
+  font-size: clamp(7px, 1.2vh, 14px);
+  letter-spacing: 0.15vh;
+  padding: 0.7vh 2vh;
+  border-radius: 0.6vh;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.cfg-reset:hover { border-color: #f5c542; color: #f5c542; }
+/* ── TOUCH-ACTION: prevent scroll-hijack on draggable elements */
+.shelf-piece, [data-supply], [data-box], .spawn-box, .sb-bar,
+.sn-header, .cell-item, .r-box-pick, .r-sticker,
+.r-foam, .r-bubble, .r-address, .r-tape {
+  touch-action: none;
+}
+html, body { touch-action: none; }
+
+/* ── Portrait warning overlay ── */
+#portrait-warn {
+  display: none;
+  position: fixed; inset: 0; z-index: 99999;
+  background: #0a0a14;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 16px; color: #f5c542;
+  font-family: 'Courier New', monospace;
+  font-size: clamp(14px, 4vw, 22px);
+  text-align: center;
+  padding: 24px;
+}
+#portrait-warn .pw-icon { font-size: clamp(48px, 12vw, 80px); }
+@media (orientation: portrait) {
+  #portrait-warn { display: flex; }
+}
 
 </style>
 </head>
 <body>
 
+<!-- Portrait-mode warning -->
+<div id="portrait-warn">
+  <div class="pw-icon">📱↻</div>
+  <div>Xoay màn hình ngang</div>
+  <div style="font-size:0.7em;color:#aaa;">Rotate to landscape to play</div>
+</div>
+
 <div id="game">
   <div id="header-info">🛵 TÀI XẾ KÝ TÀI — PACKING LEVEL 1</div>
 
-  <!-- Region: Items zone (D4:S15) → col=4, row=4, w=16, h=12 -->
+  <!-- Region: Items zone (D4:S15) → col 3-18 (16w), row 3-14 (12h) -->
   <div class="region r-items" id="items-zone"
-       style="grid-column: 4 / span 16; grid-row: 4 / span 12;
+       style="grid-column: 3 / span 16; grid-row: 3 / span 12;
               display: grid;
               grid-template-columns: repeat(16, 1fr);
               grid-template-rows: repeat(12, 1fr);
               gap: 1px;
               padding: 3px;"></div>
 
-  <!-- Region: Pack zone (T4:AU15) → col=20, row=4, w=28, h=12 -->
+  <!-- Region: Pack zone (T4:AU15) → col 19-46 (28w), row 3-14 (12h) -->
   <div class="region r-pack" id="pack-zone"
-       style="grid-column: 20 / span 28; grid-row: 4 / span 12;"></div>
+       style="grid-column: 19 / span 28; grid-row: 3 / span 12;"></div>
 
-  <!-- Box pickers row (D17:S19) — XL, LG, MD, SM in a single row -->
-  <div class="region r-box-pick" data-box="box_xl"  style="grid-column: 4  / span 4; grid-row: 17 / span 3;"></div>
-  <div class="region r-box-pick" data-box="box_lg"  style="grid-column: 8  / span 4; grid-row: 17 / span 3;"></div>
-  <div class="region r-box-pick" data-box="box_md"  style="grid-column: 12 / span 4; grid-row: 17 / span 3;"></div>
-  <div class="region r-box-pick" data-box="box_sm"  style="grid-column: 16 / span 4; grid-row: 17 / span 3;"></div>
-
-  <!-- Sticker row 1: 6 hazard stickers (D20:O22) -->
-  <div class="region r-sticker" data-supply="stk_breakable"   style="grid-column: 4  / span 2; grid-row: 20 / span 3;">
+  <!-- Sticker rows (mục 2-7: D20:O22) → row 19-21
+       Dễ Vỡ:    D20:E22  → col 3-4   (3w hiển thị label "3*2" = 2col×3row)
+       Dễ Cháy:  F20:G22  → col 5-6
+       Cồng Kềnh: H20:I22 → col 7-8
+       Dễ Ướt:   J20:K22  → col 9-10
+       Phóng Xạ: L20:M22  → col 11-12
+       Hoá Chất: N20:O22  → col 13-14 -->
+  <div class="region r-sticker" data-supply="stk_breakable"  style="grid-column: 3 / span 2;  grid-row: 19 / span 3;">
     <span class="sticker-icon">💔</span><span class="sticker-qty">×9</span>
   </div>
-  <div class="region r-sticker" data-supply="stk_flammable"   style="grid-column: 6  / span 2; grid-row: 20 / span 3;">
+  <div class="region r-sticker" data-supply="stk_flammable"  style="grid-column: 5 / span 2;  grid-row: 19 / span 3;">
     <span class="sticker-icon">🔥</span><span class="sticker-qty">×9</span>
   </div>
-  <div class="region r-sticker" data-supply="stk_heavy"       style="grid-column: 8  / span 2; grid-row: 20 / span 3;">
+  <div class="region r-sticker" data-supply="stk_heavy"      style="grid-column: 7 / span 2;  grid-row: 19 / span 3;">
     <span class="sticker-icon">🏋</span><span class="sticker-qty">×9</span>
   </div>
-  <div class="region r-sticker" data-supply="stk_keepdry"     style="grid-column: 10 / span 2; grid-row: 20 / span 3;">
+  <div class="region r-sticker" data-supply="stk_keepdry"    style="grid-column: 9 / span 2;  grid-row: 19 / span 3;">
     <span class="sticker-icon">💧</span><span class="sticker-qty">×9</span>
   </div>
-  <div class="region r-sticker" data-supply="stk_radioactive" style="grid-column: 12 / span 2; grid-row: 20 / span 3;">
+  <div class="region r-sticker" data-supply="stk_radioactive"style="grid-column: 11 / span 2; grid-row: 19 / span 3;">
     <span class="sticker-icon">☢</span><span class="sticker-qty">×9</span>
   </div>
-  <div class="region r-sticker" data-supply="stk_chemical"    style="grid-column: 14 / span 2; grid-row: 20 / span 3;">
+  <div class="region r-sticker" data-supply="stk_chemical"   style="grid-column: 13 / span 2; grid-row: 19 / span 3;">
     <span class="sticker-icon">⚗</span><span class="sticker-qty">×9</span>
   </div>
 
-  <!-- Foam / Address / Bubble / Tape (D24:O25) -->
-  <div class="region r-foam"    data-supply="foam"      style="grid-column: 4  / span 3; grid-row: 24 / span 2;">
+  <!-- Foam / Address / Bubble (row 23-24)
+       Mút lót: D24:F25 → col 3-5  (3w×2h)
+       Địa chỉ: H24:J25 → col 7-9
+       Bubble:  K24:L25 → col 10-11 -->
+  <div class="region r-foam"    data-supply="foam"    style="grid-column: 3 / span 3;  grid-row: 23 / span 2;">
     <span class="sticker-icon">🫧</span><span class="sticker-qty">×9</span>
   </div>
-  <div class="region r-address" data-supply="address"   style="grid-column: 8  / span 3; grid-row: 24 / span 2;">
+  <div class="region r-address" data-supply="address" style="grid-column: 7 / span 3;  grid-row: 23 / span 2;">
     <span class="sticker-icon">🏷</span><span class="sticker-qty">×9</span>
   </div>
-  <div class="region r-bubble"  data-supply="bubble"    style="grid-column: 11 / span 2; grid-row: 24 / span 2;">
+  <div class="region r-bubble"  data-supply="bubble"  style="grid-column: 10 / span 2; grid-row: 23 / span 2;">
     <span class="sticker-icon">💠</span><span class="sticker-qty">×9</span>
   </div>
-  <div class="region r-tape"    data-supply="duct_tape" style="grid-column: 14 / span 2; grid-row: 24 / span 2;">
-    🩹
+
+  <!-- Printer: Q21:S23 → col 16-18, row 20-22 (3w×3h) -->
+  <div class="region r-printer" id="printer" style="grid-column: 16 / span 3; grid-row: 20 / span 3;">
+    <span style="font-size:clamp(14px,3vh,32px)">🖨</span>
+    <span style="font-size:clamp(6px,1vh,10px);color:#f5c542;font-weight:700">IN ĐƠN</span>
   </div>
 
-  <!-- Printer (Q21:S23) -->
-  <div class="region r-printer" id="printer" style="grid-column: 17 / span 3; grid-row: 21 / span 3;">
-    <span style="font-size:clamp(18px,2vw,32px)">🖨</span>
-    <span style="font-size:clamp(7px,0.65vw,10px);color:#f5c542;font-weight:700">IN ĐƠN</span>
+  <!-- Shredder (Máy huỷ đơn - decoration): Q25:S26 → col 16-18, row 24-25 (3w×2h) -->
+  <div class="region r-shredder" style="grid-column: 16 / span 3; grid-row: 24 / span 2;">
+    <span style="font-size:clamp(12px,2.4vh,24px)">📄✂</span>
+    <span style="font-size:clamp(5px,0.9vh,9px);color:#a06060;letter-spacing:.1vh">HUỶ ĐƠN</span>
   </div>
 
-  <!-- Shredder = Máy huỷ đơn (Q25:S26, decoration only) -->
-  <div class="region r-shredder" style="grid-column: 17 / span 3; grid-row: 25 / span 2;">
-    <span style="font-size:clamp(14px,1.4vw,22px)">📄</span>
-    <span style="font-size:clamp(7px,0.65vw,10px);color:#aa3a50;font-weight:700">HUỶ ĐƠN</span>
+  <!-- Scanner (Máy kiểm tra đơn - decoration): U17:Z22 → col 20-25, row 16-21 (6w×6h) -->
+  <div class="region r-scanner" style="grid-column: 20 / span 6; grid-row: 16 / span 6;">
+    <span style="font-size:clamp(20px,4.5vh,48px)">📡</span>
+    <span style="font-size:clamp(6px,1vh,11px);color:#5a8aae;margin-top:0.8vh">KIỂM TRA ĐƠN</span>
   </div>
 
-  <!-- Scanner = Máy kiểm tra đơn (U17:Z22, decoration only) -->
-  <div class="region r-scanner" style="grid-column: 21 / span 6; grid-row: 17 / span 6;">
-    <span style="font-size:clamp(26px,3vw,48px)">📡</span>
-    <span style="font-size:clamp(8px,0.7vw,11px);color:#5a8aae;margin-top:6px">KIỂM TRA ĐƠN</span>
+  <!-- Trash (Thùng rác - decoration): V25:Y26 → col 21-24, row 24-25 (4w×2h) -->
+  <div class="region r-trash" id="trash" style="grid-column: 21 / span 4; grid-row: 24 / span 2;">
+    <span style="font-size:clamp(14px,2.4vh,24px)">🗑</span>
+    <span style="font-size:clamp(5px,0.9vh,9px);color:#a070a0;margin-left:0.5vh;letter-spacing:.1vh">RÁC</span>
   </div>
 
-  <!-- Trash (V25:Y26, decoration only) -->
-  <div class="region r-trash" id="trash" style="grid-column: 22 / span 4; grid-row: 25 / span 2;">
-    <span style="font-size:clamp(16px,1.6vw,24px)">🗑</span>
-    <span style="font-size:clamp(7px,0.65vw,10px);color:#888;margin-left:6px">THÙNG RÁC</span>
-  </div>
-
-  <!-- Bike area background (AB17:AU26) -->
-  <div class="region r-bike-area" id="bike-area" style="grid-column: 28 / span 20; grid-row: 17 / span 10;">
-    <svg width="86%" height="80%" viewBox="0 0 480 200" preserveAspectRatio="xMidYMid meet" style="position:absolute;pointer-events:none">
+  <!-- Bike area: AB17:AU26 → col 27-46, row 16-25 (20w×10h) -->
+  <div class="region r-bike-area" id="bike-area" style="grid-column: 27 / span 20; grid-row: 16 / span 10;">
+    <!-- Bike SVG (decorative) -->
+    <svg width="92%" height="86%" viewBox="0 0 480 200" preserveAspectRatio="xMidYMid meet" style="position:absolute;pointer-events:none">
       <ellipse cx="240" cy="195" rx="220" ry="6" fill="#0a0a14" opacity=".4"/>
+      <!-- rear wheel left -->
       <rect x="20" y="78" width="32" height="40" fill="#0a0a14" stroke="#3a4a5e" stroke-width="2" rx="4"/>
+      <!-- front wheel right -->
       <rect x="430" y="82" width="32" height="36" fill="#0a0a14" stroke="#3a4a5e" stroke-width="2" rx="4"/>
+      <!-- handlebar -->
       <rect x="436" y="60" width="6" height="62" fill="#3a4a5e" stroke="#1a2a3e" rx="2"/>
       <circle cx="439" cy="64" r="4" fill="#5a6a7e"/>
       <circle cx="439" cy="118" r="4" fill="#5a6a7e"/>
+      <!-- front shield -->
       <path d="M385 70 Q395 58 425 58 L425 122 Q395 122 385 110 Z" fill="#c12838" stroke="#7a1a20" stroke-width="2"/>
+      <!-- headlight -->
       <ellipse cx="416" cy="90" rx="4" ry="8" fill="#f5c542" opacity=".9"/>
+      <!-- middle body / seat -->
       <rect x="200" y="72" width="180" height="50" fill="#1a1a1e" stroke="#3a3a40" stroke-width="2" rx="6"/>
+      <!-- bửng platform -->
       <rect x="232" y="80" width="146" height="34" fill="#2a2a30" stroke="#3a3a40" rx="2"/>
+      <!-- rear cargo body -->
       <path d="M52 70 L200 70 L200 122 L52 122 Q42 122 42 112 L42 80 Q42 70 52 70 Z" fill="#c12838" stroke="#7a1a20" stroke-width="2"/>
       <ellipse cx="48" cy="96" rx="4" ry="6" fill="#e94560" opacity=".8"/>
     </svg>
   </div>
 
-  <!-- Bike rear cargo slot (AC18:AP25) -->
+  <!-- Bike rear slot: AC18:AP25 → col 28-41, row 17-24 (14w×8h) -->
   <div class="region r-bike-rear" id="bike-rear"
-       style="grid-column: 29 / span 14; grid-row: 18 / span 8;"></div>
+       style="grid-column: 28 / span 14; grid-row: 17 / span 8;"></div>
 
-  <!-- Bike front bửng slot (AQ19:AT24) -->
+  <!-- Bike front slot: AQ19:AT24 → col 42-45, row 18-23 (4w×6h) -->
   <div class="region r-bike-front" id="bike-front"
-       style="grid-column: 43 / span 4; grid-row: 19 / span 6;"></div>
+       style="grid-column: 42 / span 4; grid-row: 18 / span 6;"></div>
 
+  <!-- Box pickers (sat hàng dưới items-zone)
+       Thùng 4x5: D17:G19  → col 3-6, row 16-18  (4w×3h)
+       Thùng 3x4: H17:K19  → col 7-10, row 16-18 (4w×3h)
+       Thùng 2x3: L17:O19  → col 11-14, row 16-18 (4w×3h)
+       Thùng 1x2: P19:S19  → col 15-18, row 18    (4w×1h) -->
+  <div class="region r-box-pick" data-box="box_xl"  style="grid-column: 3 / span 4;  grid-row: 16 / span 3;">
+  </div>
+  <div class="region r-box-pick" data-box="box_lg"  style="grid-column: 7 / span 4;  grid-row: 16 / span 3;">
+  </div>
+  <div class="region r-box-pick" data-box="box_md"  style="grid-column: 11 / span 4; grid-row: 16 / span 3;">
+  </div>
+  <div class="region r-box-pick" data-box="box_sm"  style="grid-column: 15 / span 4; grid-row: 18 / span 1;">
+  </div>
+
+  <!-- (Old trash removed — moved to V25:Y26 above) -->
+
+  <!-- Tape: N24:O25 → col 13-14, row 23-24 -->
+  <div class="region r-tape" data-supply="duct_tape" style="grid-column: 13 / span 2; grid-row: 23 / span 2;">
+    🩹
+  </div>
+
+  <!-- Config Button -->
+  <button id="cfg-btn" onclick="toggleCfgPanel()" title="Scene Configuration">
+    <em class="cfg-icon">⚙</em> CONFIG
+  </button>
+
+  <!-- Config Panel -->
+  <div id="cfg-panel">
+    <div class="cfg-title">⚙ Scene Config</div>
+
+    <!-- Box cell size -->
+    <div class="cfg-row">
+      <div class="cfg-section-label">📦 Spawned Box</div>
+      <div class="cfg-slider-row">
+        <label>Cell size</label>
+        <input type="range" id="sl-cell" min="12" max="56" step="1" value="28"
+               oninput="applyCfg()">
+        <span class="cfg-val" id="val-cell">28px</span>
+      </div>
+    </div>
+
+    <hr class="cfg-divider">
+
+    <!-- Items zone cell size -->
+    <div class="cfg-row">
+      <div class="cfg-section-label">🗂 Items Zone</div>
+      <div class="cfg-slider-row">
+        <label>Cell size</label>
+        <input type="range" id="sl-shelf" min="8" max="60" step="1" value="60"
+               oninput="applyCfg()">
+        <span class="cfg-val" id="val-shelf">60px</span>
+      </div>
+    </div>
+
+    <hr class="cfg-divider">
+
+    <!-- Sticker size -->
+    <div class="cfg-row">
+      <div class="cfg-section-label">🏷 Stickers & Supplies</div>
+      <div class="cfg-slider-row">
+        <label>Icon size</label>
+        <input type="range" id="sl-stk" min="12" max="52" step="1" value="26"
+               oninput="applyCfg()">
+        <span class="cfg-val" id="val-stk">26px</span>
+      </div>
+      <div class="cfg-slider-row">
+        <label>Cell span</label>
+        <input type="range" id="sl-stk-cell" min="1" max="5" step="0.5" value="2"
+               oninput="applyCfg()">
+        <span class="cfg-val" id="val-stk-cell">2</span>
+      </div>
+    </div>
+
+    <button class="cfg-reset" onclick="resetCfg()">↺ RESET</button>
+  </div>
 
   <button id="deliver-btn" onclick="tryDeliver()">🛵 ĐI SHIP ▶</button>
 </div>
@@ -645,18 +914,18 @@ function initState() {
     boxOwner: {},
     boxGrids: {},
     boxes: {},          // boxKey -> def (clone w/ baseKey)
-    rearRows: [[],[],[]],   // 3 tầng, mỗi tầng tối đa 7 cột
-    frontRows: [[],[],[]],  // 3 tầng, mỗi tầng tối đa 2 cột
+    rearRows: [[],[],[],[],[],[],[],[]],   // 8 tầng, mỗi tầng tối đa 14 cột
+    frontRows: [[],[],[],[],[],[]],         // 6 tầng, mỗi tầng tối đa 4 cột
     printedOrders: new Set(), // order ids that have sticky note shown
     stickies: {},       // orderId -> {el, x, y}
     earn: 0,
   };
 
-  // Bin-pack all 30 items into the 12×16 grid (rows × cols).
+  // Bin-pack all 30 items into the 14×12 grid (rows × cols).
   // Strategy: sort blocks by bounding-box area DESC, then for each block
   // try 4 rotations × all positions (row-major) and take the first that fits.
   // The chosen rotation is saved into S.itemRotations so render/drag stay consistent.
-  const ZONE_ROWS = 12, ZONE_COLS = 16;
+  const ZONE_ROWS = 14, ZONE_COLS = 12;
   const occupied = Array.from({length:ZONE_ROWS}, () => Array(ZONE_COLS).fill(false));
 
   // --- rotation helpers (local copy; the global ones use S which isn't fully wired yet) ---
@@ -844,7 +1113,19 @@ function buildShelfPiece(item) {
     const cellsNow = getShapeCells(item);
     drag = {kind:'item', itemId: item.id, srcGrid:'shelf', cells: cellsNow};
     ev.dataTransfer.effectAllowed = 'move';
-    setTimeout(()=>wrap.classList.add('dragging'),0);
+
+    // Build a compact drag image sized to the element's actual rendered rect
+    // so it doesn't balloon when pulled outside the grid
+    const rect = wrap.getBoundingClientRect();
+    const maxDim = Math.min(window.innerHeight * 0.15, 72);
+    const scale  = Math.min(1, maxDim / Math.max(rect.width, rect.height));
+    const dw = Math.round(rect.width  * scale);
+    const dh = Math.round(rect.height * scale);
+    const img = wrap.cloneNode(true);
+    img.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${dw}px;height:${dh}px;overflow:hidden;pointer-events:none;opacity:0.85;`;
+    document.body.appendChild(img);
+    ev.dataTransfer.setDragImage(img, dw/2, dh/2);
+    setTimeout(() => { img.remove(); wrap.classList.add('dragging'); }, 0);
   });
   wrap.addEventListener('dragend', () => wrap.classList.remove('dragging'));
 
@@ -1031,8 +1312,8 @@ function renderSpawnedBoxes() {
     win.draggable = true;
 
     // Compute cell size based on box dimensions (clamped).
-    // Linear scale = 2× original (area = 4× original).
-    const cellSize = `clamp(20px, 2.4vw, 36px)`;
+    // Use config value if set, otherwise default.
+    const cellSize = window._cfgCellSize || `clamp(20px, 2.4vw, 36px)`;
 
     win.innerHTML = `
       <div class="sb-bar" data-spawnid="${spawnId}">
@@ -1124,6 +1405,17 @@ function setupBoxGrid(el, boxKey, gridData) {
         drag = {kind:'item', itemId:gridData[r][c].id, srcGrid:boxKey, srcR:r, srcC:c, cells:cellsNow};
         ev.dataTransfer.effectAllowed='move';
         ev.stopPropagation();
+        // Compact drag image so it doesn't blow up outside the grid
+        const rect = inner.getBoundingClientRect();
+        const maxDim = Math.min(window.innerHeight * 0.15, 72);
+        const sc = Math.min(1, maxDim / Math.max(rect.width, rect.height, 1));
+        const dw = Math.max(12, Math.round(rect.width  * sc));
+        const dh = Math.max(12, Math.round(rect.height * sc));
+        const img = inner.cloneNode(true);
+        img.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${dw}px;height:${dh}px;overflow:hidden;pointer-events:none;border-radius:2px;`;
+        document.body.appendChild(img);
+        ev.dataTransfer.setDragImage(img, dw/2, dh/2);
+        setTimeout(() => img.remove(), 0);
       });
       cell.appendChild(inner);
     }
@@ -1300,8 +1592,8 @@ function renderBoxStatus(boxKey) {
 
 /* ─── Bike slots (rear & front) — accept boxes only ─────── */
 function renderBikeSlots() {
-  renderBikeMultiRow('bike-rear', S.rearRows, 7);   // 3 tầng × 7 ô
-  renderBikeMultiRow('bike-front', S.frontRows, 2); // 3 tầng × 2 ô
+  renderBikeMultiRow('bike-rear', S.rearRows, 14);  // 8 tầng × 14 cột
+  renderBikeMultiRow('bike-front', S.frontRows, 4); // 6 tầng × 4 cột
 }
 
 function renderBikeMultiRow(elId, rows, maxCols) {
@@ -1327,11 +1619,11 @@ function renderBikeMultiRow(elId, rows, maxCols) {
       block.style.cssText = `position:relative;display:flex;height:88%;`;
       for(let ci=0;ci<def.cols;ci++) {
         const c = document.createElement('div');
-        c.style.cssText = `flex:1;min-width:clamp(8px,1.1vw,20px);height:100%;background:${def.color};border:1px solid rgba(255,255,255,.2);margin-right:1px;border-radius:2px`;
+        c.style.cssText = `flex:1;min-width:clamp(6px,1.5vh,20px);height:100%;background:${def.color};border:1px solid rgba(255,255,255,.2);margin-right:1px;border-radius:0.3vh`;
         block.appendChild(c);
       }
       const rm = document.createElement('div');
-      rm.style.cssText = `position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#e74c3c;color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5`;
+      rm.style.cssText = `position:absolute;top:-0.7vh;right:-0.7vh;width:clamp(10px,2vh,18px);height:clamp(10px,2vh,18px);border-radius:50%;background:#e74c3c;color:#fff;font-size:clamp(7px,1.2vh,11px);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5`;
       rm.textContent = '✕';
       rm.onclick = () => { arr.splice(bi,1); putBoxBackToZone(bid); };
       block.appendChild(rm);
@@ -1340,7 +1632,7 @@ function renderBikeMultiRow(elId, rows, maxCols) {
 
     for(let i=0;i<rem;i++) {
       const ec = document.createElement('div');
-      ec.style.cssText = `flex:1;min-width:clamp(8px,1.1vw,20px);height:88%;background:#0a1525;border:1px solid #1a3a6e;border-radius:2px;opacity:.5`;
+      ec.style.cssText = `flex:1;min-width:clamp(6px,1.5vh,20px);height:88%;background:#0a1525;border:0.12vh solid #1a3a6e;border-radius:0.3vh;opacity:.5`;
       rowEl.appendChild(ec);
     }
 
@@ -1427,7 +1719,7 @@ function renderStickies() {
     el.id = 'sticky-'+orderId;
     el.style.left = pos.x + '%';
     el.style.top = pos.y + '%';
-    el.style.width = 'clamp(140px, 13vw, 200px)';
+    el.style.width = 'clamp(80px, 20vh, 200px)';
     el.style.transform = `rotate(${STICKY_ROTS[idx%STICKY_ROTS.length]}deg)`;
     buildStickyContent(el, ord);
     game.appendChild(el);
@@ -1595,10 +1887,682 @@ function tryDeliver() {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   CONFIG PANEL
+═══════════════════════════════════════════════════════════════ */
+const CFG_DEFAULTS = {
+  cell:    28,   // spawned box grid cell px
+  shelf:   60,   // items-zone shelf cell — used as a MAX cap (autoFit picks the smaller)
+  stk:     26,   // sticker icon font-size
+  stkCell: 2,    // sticker span multiplier (visual tweak via font-size scale)
+};
+
+function toggleCfgPanel() {
+  const panel = document.getElementById('cfg-panel');
+  const btn   = document.getElementById('cfg-btn');
+  const open  = panel.classList.toggle('visible');
+  btn.classList.toggle('open', open);
+}
+
+// Close panel when clicking outside
+document.addEventListener('click', e => {
+  const panel = document.getElementById('cfg-panel');
+  const btn   = document.getElementById('cfg-btn');
+  if(panel.classList.contains('visible') && !panel.contains(e.target) && e.target !== btn && !btn.contains(e.target)) {
+    panel.classList.remove('visible');
+    btn.classList.remove('open');
+  }
+});
+
+/* Auto-fit items-zone with SQUARE cells.
+   The items-zone is a 16-col × 12-row grid. To keep every shelf-piece cell
+   visually square, we compute the largest square cell size that still fits
+   inside the zone's actual rendered rect, then write it into the zone's
+   grid-template-columns/rows in px. We center the grid using justify/align. */
+function autoFitItemsZone(maxCellPx) {
+  const ITEMS_COLS = 16, ITEMS_ROWS = 12;
+  const zone = document.getElementById('items-zone');
+  if(!zone) return;
+  const rect = zone.getBoundingClientRect();
+  if(rect.width<=0 || rect.height<=0) return;
+  // Read padding (zone has padding:3px) and gap (1px) and account for them
+  const cs = getComputedStyle(zone);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop)  + parseFloat(cs.paddingBottom);
+  const gap  = 1; // matches inline style above
+  const availW = rect.width  - padX - gap*(ITEMS_COLS-1);
+  const availH = rect.height - padY - gap*(ITEMS_ROWS-1);
+  const fitW = Math.floor(availW / ITEMS_COLS);
+  const fitH = Math.floor(availH / ITEMS_ROWS);
+  let cell = Math.max(4, Math.min(fitW, fitH));
+  if(maxCellPx && maxCellPx>0) cell = Math.min(cell, maxCellPx);
+  zone.style.gridTemplateColumns = `repeat(${ITEMS_COLS}, ${cell}px)`;
+  zone.style.gridTemplateRows    = `repeat(${ITEMS_ROWS}, ${cell}px)`;
+  zone.style.justifyContent = 'center';
+  zone.style.alignContent   = 'center';
+  window._itemsCellPx = cell;
+}
+
+function applyCfg() {
+  const cellPx   = +document.getElementById('sl-cell').value;
+  const shelfPx  = +document.getElementById('sl-shelf').value;
+  const stkPx    = +document.getElementById('sl-stk').value;
+  const stkCell  = +document.getElementById('sl-stk-cell').value;
+
+  // Update value labels
+  document.getElementById('val-cell').textContent  = cellPx + 'px';
+  document.getElementById('val-shelf').textContent = shelfPx + 'px';
+  document.getElementById('val-stk').textContent   = stkPx + 'px';
+  document.getElementById('val-stk-cell').textContent = stkCell;
+
+  // Update slider track fill (CSS custom property trick)
+  ['sl-cell','sl-shelf','sl-stk','sl-stk-cell'].forEach(id => {
+    const sl = document.getElementById(id);
+    const min = +sl.min, max = +sl.max, val = +sl.value;
+    const pct = Math.round(((val - min) / (max - min)) * 100);
+    sl.style.setProperty('--pct', pct + '%');
+  });
+
+  // ── 1. Spawned box grid cell size ────────────────────────
+  // Patch the cellSize used in renderSpawnedBoxes and re-render
+  window._cfgCellSize = cellPx + 'px';
+  renderSpawnedBoxes();
+
+  // ── 2. Items-zone shelf piece cell size ──────────────────
+  // Compute a SQUARE cell size that fits inside the items-zone bounds
+  // (16 cols × 12 rows). User's slider value is a UPPER cap only — if the
+  // computed fit is smaller, we use the smaller value so cells stay square
+  // AND fit the zone.
+  autoFitItemsZone(shelfPx);
+
+  // ── 3. Sticker / supply icon size ───────────────────────
+  // Update all sticker-icon elements
+  document.querySelectorAll('.sticker-icon').forEach(el => {
+    el.style.fontSize = stkPx + 'px';
+  });
+  // Scale the sticker region cells (grid span → visual size via min-height)
+  document.querySelectorAll('.r-sticker, .r-foam, .r-address, .r-bubble').forEach(el => {
+    el.style.minHeight = (stkPx * stkCell * 0.9) + 'px';
+    el.style.minWidth  = (stkPx * stkCell * 0.9) + 'px';
+  });
+}
+
+function resetCfg() {
+  document.getElementById('sl-cell').value     = CFG_DEFAULTS.cell;
+  document.getElementById('sl-shelf').value    = CFG_DEFAULTS.shelf;
+  document.getElementById('sl-stk').value      = CFG_DEFAULTS.stk;
+  document.getElementById('sl-stk-cell').value = CFG_DEFAULTS.stkCell;
+  // Clear overrides (autoFit will re-apply)
+  document.querySelectorAll('.sticker-icon').forEach(el => el.style.fontSize = '');
+  document.querySelectorAll('.r-sticker, .r-foam, .r-address, .r-bubble').forEach(el => {
+    el.style.minHeight = ''; el.style.minWidth = '';
+  });
+  window._cfgCellSize = null;
+  applyCfg();
+  renderSpawnedBoxes();
+}
+
+// Re-fit on resize (debounced)
+let _resizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(_resizeTimer);
+  _resizeTimer = setTimeout(() => {
+    const sl = document.getElementById('sl-shelf');
+    autoFitItemsZone(sl ? +sl.value : 0);
+  }, 80);
+});
+
+// Initialize slider fill on load
+window.addEventListener('DOMContentLoaded', () => {
+  ['sl-cell','sl-shelf','sl-stk','sl-stk-cell'].forEach(id => {
+    const sl = document.getElementById(id);
+    if(!sl) return;
+    const min = +sl.min, max = +sl.max, val = +sl.value;
+    const pct = Math.round(((val - min) / (max - min)) * 100);
+    sl.style.setProperty('--pct', pct + '%');
+  });
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   TOUCH SUPPORT
+   Strategy: on touchstart we record the drag source; on touchmove
+   we show a floating ghost clone and hit-test the element under
+   the finger; on touchend we fire the same logic as the mouse/HTML5
+   drag handlers above.
+═══════════════════════════════════════════════════════════════ */
+
+(function() {
+  'use strict';
+
+  /* ── ghost element ───────────────────────────────────────── */
+  let ghost = null;
+  function createGhost(src) {
+    if(ghost) ghost.remove();
+    ghost = src.cloneNode(true);
+
+    // Capture the actual rendered dimensions BEFORE detaching from DOM
+    const rect = src.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
+
+    // Cap ghost size — shelf pieces stretch to fill their grid slot which
+    // can be huge on large screens; clamp to something finger-friendly
+    const maxDim = Math.min(window.innerHeight * 0.18, 80);
+    const scale  = (w > maxDim || h > maxDim)
+      ? maxDim / Math.max(w, h)
+      : 1;
+
+    ghost.style.cssText = `
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      width: ${w}px;
+      height: ${h}px;
+      opacity: 0.75;
+      transform: scale(${scale * 1.08});
+      transform-origin: center center;
+      transition: none;
+      box-shadow: 0 6px 20px rgba(0,0,0,.5);
+      overflow: hidden;
+    `;
+    document.body.appendChild(ghost);
+    return ghost;
+  }
+  function moveGhost(cx, cy) {
+    if(!ghost) return;
+    const w = ghost.offsetWidth, h = ghost.offsetHeight;
+    ghost.style.left = (cx - w/2) + 'px';
+    ghost.style.top  = (cy - h/2) + 'px';
+  }
+  function removeGhost() { if(ghost){ ghost.remove(); ghost=null; } }
+
+  /* ── element under touch point (ignoring ghost) ─────────── */
+  function elAt(cx, cy) {
+    if(ghost) ghost.style.display='none';
+    const el = document.elementFromPoint(cx, cy);
+    if(ghost) ghost.style.display='';
+    return el;
+  }
+
+  /* ── pct position within an element ─────────────────────── */
+  function pctIn(el, cx, cy) {
+    const r = el.getBoundingClientRect();
+    return { x:((cx-r.left)/r.width)*100, y:((cy-r.top)/r.height)*100 };
+  }
+
+  /* ── find ancestor matching selector ────────────────────── */
+  function closest(el, sel) { return el ? el.closest(sel) : null; }
+
+  /* ── highlight a drop target ─────────────────────────────── */
+  let lastHighlight = null;
+  function highlight(el, ok) {
+    clearHighlight();
+    if(!el) return;
+    lastHighlight = el;
+    el.dataset._prevBorder = el.style.borderColor || '';
+    el.dataset._prevBg     = el.style.background  || '';
+    el.style.borderColor = ok ? '#2ecc71' : '#e94560';
+    el.style.background  = ok ? 'rgba(26,74,62,.3)' : 'rgba(74,26,26,.2)';
+  }
+  function clearHighlight() {
+    if(!lastHighlight) return;
+    lastHighlight.style.borderColor = lastHighlight.dataset._prevBorder || '';
+    lastHighlight.style.background  = lastHighlight.dataset._prevBg     || '';
+    lastHighlight = null;
+  }
+
+  /* ── state ───────────────────────────────────────────────── */
+  let touch = {
+    kind: null,        // 'item'|'supply'|'box-spawn'|'box-to-bike'|'spawn-box-move'|'sticky-move'
+    srcEl: null,       // original element
+    // item-specific
+    itemId: null,
+    cells: null,
+    srcGrid: null,
+    // supply-specific
+    supplyId: null,
+    // box-spawn
+    defKey: null,
+    // box-to-bike / spawn-box-move
+    boxKey: null,
+    spawnId: null,
+    spawnRef: null,    // {sp} object in S.spawnedBoxes
+    // sticky
+    orderId: null,
+    stickyEl: null,
+    offX: 0, offY: 0,
+    // long-press timer
+    lpTimer: null,
+  };
+
+  function resetTouch() {
+    if(touch.lpTimer) { clearTimeout(touch.lpTimer); touch.lpTimer=null; }
+    touch = { kind:null, srcEl:null, itemId:null, cells:null, srcGrid:null,
+              supplyId:null, defKey:null, boxKey:null, spawnId:null, spawnRef:null,
+              orderId:null, stickyEl:null, offX:0, offY:0, lpTimer:null };
+    removeGhost();
+    clearHighlight();
+    document.querySelectorAll('.dragging').forEach(e=>e.classList.remove('dragging'));
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     TOUCH-START — figure out what the user is picking up
+  ════════════════════════════════════════════════════════════ */
+  document.addEventListener('touchstart', onTouchStart, {passive:false});
+
+  function onTouchStart(e) {
+    const t   = e.changedTouches[0];
+    const cx  = t.clientX, cy = t.clientY;
+    const src = e.target;
+
+    /* ── close config panel on outside tap ─────────── */
+    const panel = document.getElementById('cfg-panel');
+    const cfgBtn = document.getElementById('cfg-btn');
+    if(panel && panel.classList.contains('visible') &&
+       !panel.contains(src) && !cfgBtn.contains(src)) {
+      panel.classList.remove('visible');
+      cfgBtn.classList.remove('open');
+    }
+
+    /* ── sb-x close button ──────────────────────────── */
+    if(closest(src, '.sb-x')) return; // handled by onclick
+
+    /* ── sticky note header drag ────────────────────── */
+    const snHeader = closest(src, '.sn-header');
+    if(snHeader && !src.classList.contains('sn-close')) {
+      const stickyEl = snHeader.closest('.sticky-note');
+      if(!stickyEl) return;
+      const orderId = stickyEl.id.replace('sticky-','');
+      const grect = document.getElementById('game').getBoundingClientRect();
+      const erect = stickyEl.getBoundingClientRect();
+      touch.kind='sticky-move'; touch.orderId=orderId; touch.stickyEl=stickyEl;
+      touch.offX = cx - erect.left;
+      touch.offY = cy - erect.top;
+      touch._grect = grect;
+      e.preventDefault();
+      return;
+    }
+
+    /* ── spawned-box titlebar drag ──────────────────── */
+    const sbBar = closest(src, '.sb-bar');
+    if(sbBar) {
+      const spawnId = sbBar.dataset.spawnid;
+      const spawnRef = S.spawnedBoxes.find(b=>b.spawnId===spawnId);
+      if(!spawnRef) return;
+      touch.kind='spawn-box-move'; touch.spawnId=spawnId; touch.spawnRef=spawnRef;
+      const zone = document.getElementById('pack-zone');
+      const zrect = zone.getBoundingClientRect();
+      const wrect = document.getElementById('spbox-'+spawnId).getBoundingClientRect();
+      touch.offX = cx - wrect.left;
+      touch.offY = cy - wrect.top;
+      touch._zone = zone;
+      e.preventDefault();
+      return;
+    }
+
+    /* ── cell-item drag (item from inside a box) ────── */
+    const cellItem = closest(src, '.cell-item');
+    if(cellItem) {
+      const cell = cellItem.closest('.grid-cell');
+      const gridCont = cell?.closest('.grid-container');
+      if(cell && gridCont) {
+        const r = +cell.dataset.r, c = +cell.dataset.c;
+        const spawnId = gridCont.id.replace('spgrid-','');
+        const spawnRef = S.spawnedBoxes.find(b=>b.spawnId===spawnId);
+        if(!spawnRef) return;
+        const boxKey = spawnRef.boxKey;
+        const gridData = S.boxGrids[boxKey];
+        const entry = gridData?.[r]?.[c];
+        if(!entry) return;
+        const it = getItem(entry.id);
+        if(!it) return;
+        const cells = getShapeCells(it);
+        drag = {kind:'item', itemId:entry.id, srcGrid:boxKey, srcR:r, srcC:c, cells};
+        touch.kind='item'; touch.itemId=entry.id; touch.cells=cells; touch.srcEl=cellItem;
+        touch.srcGrid=boxKey;
+        createGhost(cellItem); moveGhost(cx,cy);
+        cellItem.style.opacity='0.3';
+        e.preventDefault();
+      }
+      return;
+    }
+
+    /* ── shelf-piece drag ───────────────────────────── */
+    const shelfPiece = closest(src, '.shelf-piece');
+    if(shelfPiece) {
+      const itemId = shelfPiece.dataset.itemid;
+      if(!itemId) return;
+      const it = getItem(itemId);
+      if(!it) return;
+      const cells = getShapeCells(it);
+      drag = {kind:'item', itemId, srcGrid:'shelf', cells};
+      touch.kind='item'; touch.itemId=itemId; touch.cells=cells;
+      touch.srcEl=shelfPiece; touch.srcGrid='shelf';
+
+      /* long-press to rotate (700 ms) */
+      touch.lpTimer = setTimeout(() => {
+        S.itemRotations[itemId] = ((S.itemRotations[itemId]||0)+1)%4;
+        const zone = document.getElementById('items-zone');
+        const old = zone.querySelector(`[data-itemid="${itemId}"]`);
+        if(old) zone.replaceChild(buildShelfPiece(it), old);
+        drag.cells = getShapeCells(it);
+        touch.cells = drag.cells;
+        showToast('↻ Xoay');
+        resetTouch();
+      }, 700);
+
+      createGhost(shelfPiece); moveGhost(cx,cy);
+      shelfPiece.classList.add('dragging');
+      e.preventDefault();
+      return;
+    }
+
+    /* ── supply / sticker drag ──────────────────────── */
+    const supplyEl = closest(src, '[data-supply]');
+    if(supplyEl && !supplyEl.classList.contains('disabled')) {
+      const supplyId = supplyEl.dataset.supply;
+      drag = {kind:'supply', supplyId};
+      touch.kind='supply'; touch.supplyId=supplyId; touch.srcEl=supplyEl;
+      createGhost(supplyEl); moveGhost(cx,cy);
+      supplyEl.classList.add('dragging');
+      e.preventDefault();
+      return;
+    }
+
+    /* ── box-picker drag ────────────────────────────── */
+    const boxPick = closest(src, '[data-box]');
+    if(boxPick && !boxPick.classList.contains('empty')) {
+      const defKey = boxPick.dataset.box;
+      drag = {kind:'box-spawn', defKey};
+      touch.kind='box-spawn'; touch.defKey=defKey; touch.srcEl=boxPick;
+      createGhost(boxPick); moveGhost(cx,cy);
+      e.preventDefault();
+      return;
+    }
+
+    /* ── spawned-box drag to bike ───────────────────── */
+    const spawnBox = closest(src, '.spawn-box');
+    if(spawnBox && !closest(src, '.grid-cell')) {
+      const spawnId = spawnBox.id.replace('spbox-','');
+      const spawnRef = S.spawnedBoxes.find(b=>b.spawnId===spawnId);
+      if(!spawnRef) return;
+      const boxKey = spawnRef.boxKey;
+      if(!canBoxGoOnBike(boxKey)) {
+        showToast('Thùng chưa SẴN SÀNG!');
+        return;
+      }
+      drag = {kind:'box-to-bike', boxKey};
+      touch.kind='box-to-bike'; touch.boxKey=boxKey; touch.spawnId=spawnId; touch.srcEl=spawnBox;
+      createGhost(spawnBox); moveGhost(cx,cy);
+      spawnBox.style.opacity='0.4';
+      e.preventDefault();
+      return;
+    }
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     TOUCH-MOVE — move ghost, highlight targets
+  ════════════════════════════════════════════════════════════ */
+  document.addEventListener('touchmove', onTouchMove, {passive:false});
+
+  function onTouchMove(e) {
+    if(!touch.kind) return;
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    const cx = t.clientX, cy = t.clientY;
+
+    /* cancel long-press if moved */
+    if(touch.lpTimer) { clearTimeout(touch.lpTimer); touch.lpTimer=null; }
+
+    /* sticky note repositioning */
+    if(touch.kind==='sticky-move') {
+      const gr = touch._grect;
+      const x = ((cx - gr.left - touch.offX) / gr.width) * 100;
+      const y = ((cy - gr.top  - touch.offY) / gr.height) * 100;
+      const el = touch.stickyEl;
+      el.style.left = Math.max(0, Math.min(85, x)) + '%';
+      el.style.top  = Math.max(0, Math.min(85, y)) + '%';
+      S.stickies[touch.orderId] = {x, y};
+      return;
+    }
+
+    /* spawn-box titlebar repositioning */
+    if(touch.kind==='spawn-box-move') {
+      const zone = touch._zone;
+      const rect = zone.getBoundingClientRect();
+      const nx = ((cx - rect.left - touch.offX) / rect.width) * 100;
+      const ny = ((cy - rect.top  - touch.offY) / rect.height) * 100;
+      touch.spawnRef.x = Math.max(0, Math.min(85, nx));
+      touch.spawnRef.y = Math.max(0, Math.min(80, ny));
+      const win = document.getElementById('spbox-'+touch.spawnId);
+      if(win) { win.style.left=touch.spawnRef.x+'%'; win.style.top=touch.spawnRef.y+'%'; }
+      return;
+    }
+
+    moveGhost(cx, cy);
+    clearHighlight();
+
+    const under = elAt(cx, cy);
+    if(!under) return;
+
+    if(touch.kind==='item') {
+      /* highlight grid cell under finger */
+      const cell = closest(under, '.grid-cell');
+      if(cell) {
+        const gridCont = cell.closest('.grid-container');
+        const spawnId = gridCont?.id.replace('spgrid-','');
+        const spawnRef = S.spawnedBoxes.find(b=>b.spawnId===spawnId);
+        if(spawnRef) {
+          const r = +cell.dataset.r, c = +cell.dataset.c;
+          const gridData = S.boxGrids[spawnRef.boxKey];
+          const ok = canFit(touch.cells, r, c, gridData);
+          highlight(cell, ok);
+        }
+      }
+      /* highlight fragile item for bubble drop (supply=bubble dragged) */
+    }
+
+    if(touch.kind==='supply' && touch.supplyId==='bubble') {
+      const sp = closest(under, '.shelf-piece');
+      if(sp) {
+        const it = getItem(sp.dataset.itemid);
+        if(it?.fragile && !S.bubbled.has(it.id)) highlight(sp, true);
+      }
+    }
+
+    if(touch.kind==='supply') {
+      const box = closest(under, '.spawn-box');
+      if(box) highlight(box, true);
+    }
+
+    if(touch.kind==='box-spawn') {
+      const pack = closest(under, '#pack-zone');
+      if(pack) highlight(pack, true);
+    }
+
+    if(touch.kind==='box-to-bike') {
+      const rowEl = closest(under, '[ondragover]') ||
+                    (under.style?.borderColor !== undefined && closest(under, 'div[style]'));
+      /* find the bike row div under finger */
+      const bikeRear  = document.getElementById('bike-rear');
+      const bikeFront = document.getElementById('bike-front');
+      [bikeRear, bikeFront].forEach(bikeEl => {
+        if(!bikeEl) return;
+        const rows = bikeEl.querySelectorAll(':scope > div');
+        rows.forEach(rowDiv => {
+          const rr = rowDiv.getBoundingClientRect();
+          if(cx>=rr.left && cx<=rr.right && cy>=rr.top && cy<=rr.bottom) {
+            const maxCols = bikeEl.id==='bike-rear' ? 14 : 4;
+            const rowIdx  = [...bikeEl.children].indexOf(rowDiv);
+            const rowArr  = bikeEl.id==='bike-rear' ? S.rearRows[rowIdx] : S.frontRows[rowIdx];
+            if(rowArr===undefined) return;
+            const used = rowArr.reduce((s,b)=>s+(S.boxes[b]?.cols||0), 0);
+            const bc   = S.boxes[touch.boxKey]?.cols || 0;
+            const allOnBike = [...S.rearRows.flat(), ...S.frontRows.flat()];
+            const ok = used+bc<=maxCols && !allOnBike.includes(touch.boxKey);
+            highlight(rowDiv, ok);
+          }
+        });
+      });
+    }
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     TOUCH-END — commit the action
+  ════════════════════════════════════════════════════════════ */
+  document.addEventListener('touchend', onTouchEnd, {passive:false});
+  document.addEventListener('touchcancel', resetTouch, {passive:false});
+
+  function onTouchEnd(e) {
+    if(!touch.kind) return;
+    const t = e.changedTouches[0];
+    const cx = t.clientX, cy = t.clientY;
+
+    if(touch.lpTimer) { clearTimeout(touch.lpTimer); touch.lpTimer=null; }
+
+    /* sticky / spawn-box-move: just release */
+    if(touch.kind==='sticky-move' || touch.kind==='spawn-box-move') {
+      resetTouch(); return;
+    }
+
+    const under = elAt(cx, cy);
+    clearHighlight();
+
+    /* ── item drop ──────────────────────────────────── */
+    if(touch.kind==='item') {
+      // re-show source
+      if(touch.srcEl) touch.srcEl.style.opacity='';
+      if(touch.srcEl) touch.srcEl.classList.remove('dragging');
+
+      const cell = under ? closest(under, '.grid-cell') : null;
+      if(cell) {
+        const gridCont = cell.closest('.grid-container');
+        const spawnId = gridCont?.id.replace('spgrid-','');
+        const spawnRef = S.spawnedBoxes.find(b=>b.spawnId===spawnId);
+        if(spawnRef) {
+          const r = +cell.dataset.r, c = +cell.dataset.c;
+          const boxKey = spawnRef.boxKey;
+          const gridData = S.boxGrids[boxKey];
+          if(canFit(touch.cells, r, c, gridData)) {
+            removeItemFromGrids(touch.itemId);
+            touch.cells.forEach(([dr,dc])=>gridData[r+dr][c+dc]={id:touch.itemId});
+            S.packedItems.add(touch.itemId);
+            const ord = findOrderForItem(touch.itemId);
+            if(ord) S.boxOwner[boxKey] = ord.id;
+            updateBoxStatus(boxKey);
+            drag = {kind:null};
+            renderSpawnedBoxes(); renderItemsZone(); renderStickies(); updateDeliverBtn();
+          } else {
+            showToast('Không vừa!');
+            drag = {kind:null};
+          }
+        }
+      } else {
+        drag = {kind:null};
+      }
+      resetTouch(); return;
+    }
+
+    /* ── supply drop ────────────────────────────────── */
+    if(touch.kind==='supply') {
+      if(touch.srcEl) touch.srcEl.classList.remove('dragging');
+
+      /* bubble wrap on shelf piece */
+      if(touch.supplyId==='bubble' && under) {
+        const sp = closest(under, '.shelf-piece');
+        if(sp) {
+          const it = getItem(sp.dataset.itemid);
+          if(it && it.fragile && !S.bubbled.has(it.id) && S.inventory.bubble>0) {
+            S.bubbled.add(it.id); S.inventory.bubble--;
+            showToast('✓ Đã bọc Bubble Wrap');
+            const z = document.getElementById('items-zone');
+            const old = z.querySelector(`[data-itemid="${it.id}"]`);
+            if(old) z.replaceChild(buildShelfPiece(it), old);
+            renderSupplyQtys();
+            drag = {kind:null};
+            resetTouch(); return;
+          }
+        }
+      }
+
+      /* supply onto spawned box */
+      const box = under ? closest(under, '.spawn-box') : null;
+      if(box) {
+        const spawnId = box.id.replace('spbox-','');
+        const spawnRef = S.spawnedBoxes.find(b=>b.spawnId===spawnId);
+        if(spawnRef) {
+          handleSupplyDrop(spawnRef.boxKey, touch.supplyId);
+        }
+      }
+      drag = {kind:null};
+      resetTouch(); return;
+    }
+
+    /* ── box-spawn drop into pack zone ──────────────── */
+    if(touch.kind==='box-spawn') {
+      const pack = document.getElementById('pack-zone');
+      const pr = pack.getBoundingClientRect();
+      if(cx>=pr.left && cx<=pr.right && cy>=pr.top && cy<=pr.bottom) {
+        const x = ((cx-pr.left)/pr.width)*100;
+        const y = ((cy-pr.top)/pr.height)*100;
+        spawnBox(touch.defKey, x, y);
+      }
+      drag = {kind:null};
+      resetTouch(); return;
+    }
+
+    /* ── box-to-bike drop ───────────────────────────── */
+    if(touch.kind==='box-to-bike') {
+      if(touch.srcEl) touch.srcEl.style.opacity='';
+      let dropped = false;
+      const bikeRear  = document.getElementById('bike-rear');
+      const bikeFront = document.getElementById('bike-front');
+      [bikeRear, bikeFront].forEach(bikeEl => {
+        if(!bikeEl || dropped) return;
+        const maxCols = bikeEl.id==='bike-rear' ? 14 : 4;
+        const rowsArr = bikeEl.id==='bike-rear' ? S.rearRows : S.frontRows;
+        const rows = bikeEl.querySelectorAll(':scope > div');
+        rows.forEach((rowDiv, rowIdx) => {
+          if(dropped) return;
+          const rr = rowDiv.getBoundingClientRect();
+          if(cx>=rr.left && cx<=rr.right && cy>=rr.top && cy<=rr.bottom) {
+            const rowArr = rowsArr[rowIdx];
+            if(!rowArr) return;
+            const used = rowArr.reduce((s,b)=>s+(S.boxes[b]?.cols||0), 0);
+            const bc   = S.boxes[touch.boxKey]?.cols || 0;
+            const allOnBike = [...S.rearRows.flat(), ...S.frontRows.flat()];
+            if(used+bc<=maxCols && !allOnBike.includes(touch.boxKey)) {
+              rowArr.push(touch.boxKey);
+              const sIdx = S.spawnedBoxes.findIndex(b=>b.boxKey===touch.boxKey);
+              if(sIdx>=0) S.spawnedBoxes.splice(sIdx,1);
+              dropped = true;
+              renderAll();
+            } else {
+              showToast('Không đủ chỗ trên xe!');
+            }
+          }
+        });
+      });
+      drag = {kind:null};
+      resetTouch(); return;
+    }
+
+    resetTouch();
+  }
+
+})(); // end touch IIFE
+
+/* ═══════════════════════════════════════════════════════════════
    BOOT
 ═══════════════════════════════════════════════════════════════ */
 initState();
 renderAll();
+
+// Initial auto-fit for items-zone — must run after layout settles
+// rAF ensures the grid has been measured before we read getBoundingClientRect
+requestAnimationFrame(() => {
+  const sl = document.getElementById('sl-shelf');
+  autoFitItemsZone(sl ? +sl.value : 0);
+});
 </script>
 </body>
 </html>
