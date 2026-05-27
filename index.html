@@ -1096,7 +1096,19 @@ function buildShelfPiece(item) {
     const cellsNow = getShapeCells(item);
     drag = {kind:'item', itemId: item.id, srcGrid:'shelf', cells: cellsNow};
     ev.dataTransfer.effectAllowed = 'move';
-    setTimeout(()=>wrap.classList.add('dragging'),0);
+
+    // Build a compact drag image sized to the element's actual rendered rect
+    // so it doesn't balloon when pulled outside the grid
+    const rect = wrap.getBoundingClientRect();
+    const maxDim = Math.min(window.innerHeight * 0.15, 72);
+    const scale  = Math.min(1, maxDim / Math.max(rect.width, rect.height));
+    const dw = Math.round(rect.width  * scale);
+    const dh = Math.round(rect.height * scale);
+    const img = wrap.cloneNode(true);
+    img.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${dw}px;height:${dh}px;overflow:hidden;pointer-events:none;opacity:0.85;`;
+    document.body.appendChild(img);
+    ev.dataTransfer.setDragImage(img, dw/2, dh/2);
+    setTimeout(() => { img.remove(); wrap.classList.add('dragging'); }, 0);
   });
   wrap.addEventListener('dragend', () => wrap.classList.remove('dragging'));
 
@@ -1376,6 +1388,17 @@ function setupBoxGrid(el, boxKey, gridData) {
         drag = {kind:'item', itemId:gridData[r][c].id, srcGrid:boxKey, srcR:r, srcC:c, cells:cellsNow};
         ev.dataTransfer.effectAllowed='move';
         ev.stopPropagation();
+        // Compact drag image so it doesn't blow up outside the grid
+        const rect = inner.getBoundingClientRect();
+        const maxDim = Math.min(window.innerHeight * 0.15, 72);
+        const sc = Math.min(1, maxDim / Math.max(rect.width, rect.height, 1));
+        const dw = Math.max(12, Math.round(rect.width  * sc));
+        const dh = Math.max(12, Math.round(rect.height * sc));
+        const img = inner.cloneNode(true);
+        img.style.cssText = `position:fixed;top:-9999px;left:-9999px;width:${dw}px;height:${dh}px;overflow:hidden;pointer-events:none;border-radius:2px;`;
+        document.body.appendChild(img);
+        ev.dataTransfer.setDragImage(img, dw/2, dh/2);
+        setTimeout(() => img.remove(), 0);
       });
       cell.appendChild(inner);
     }
@@ -1964,10 +1987,31 @@ window.addEventListener('DOMContentLoaded', () => {
   function createGhost(src) {
     if(ghost) ghost.remove();
     ghost = src.cloneNode(true);
-    ghost.style.cssText += `;
-      position:fixed; pointer-events:none; z-index:9999;
-      opacity:0.7; transform:scale(1.08);
-      transition:none; box-shadow:0 6px 20px rgba(0,0,0,.5);
+
+    // Capture the actual rendered dimensions BEFORE detaching from DOM
+    const rect = src.getBoundingClientRect();
+    const w = Math.round(rect.width);
+    const h = Math.round(rect.height);
+
+    // Cap ghost size — shelf pieces stretch to fill their grid slot which
+    // can be huge on large screens; clamp to something finger-friendly
+    const maxDim = Math.min(window.innerHeight * 0.18, 80);
+    const scale  = (w > maxDim || h > maxDim)
+      ? maxDim / Math.max(w, h)
+      : 1;
+
+    ghost.style.cssText = `
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      width: ${w}px;
+      height: ${h}px;
+      opacity: 0.75;
+      transform: scale(${scale * 1.08});
+      transform-origin: center center;
+      transition: none;
+      box-shadow: 0 6px 20px rgba(0,0,0,.5);
+      overflow: hidden;
     `;
     document.body.appendChild(ghost);
     return ghost;
