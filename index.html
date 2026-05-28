@@ -627,6 +627,11 @@ body {
   background: #dceaf7 !important;
   border: 0.3vh solid #a8c8e8 !important;
   box-shadow: inset 0 0.3vh 0.6vh rgba(0,0,0,.04);
+  transition: background .12s, border-color .12s;
+}
+.r-items.drag-return {
+  background: #c4e0d4 !important;
+  border-color: #3a9a6a !important;
 }
 
 /* ── PACK ZONE (chỗ kéo thùng vào xếp) ── */
@@ -753,6 +758,24 @@ body {
   gap: 0.2vh;
 }
 
+/* Dao rọc giấy (thay máy huỷ giấy) — drag target để mở thùng đã taped */
+.r-cutter {
+  background: linear-gradient(180deg, #c8e0f0, #a8c8e0) !important;
+  border: 0.3vh solid var(--c-line) !important;
+  box-shadow: 0 0.4vh 0 var(--c-line), 0 0.5vh 1vh var(--c-shadow);
+  color: var(--c-ink) !important;
+  cursor: pointer;
+  flex-direction: column;
+  padding: 0.3vh;
+  transition: transform .12s ease;
+}
+.r-cutter:hover { transform: translateY(-0.2vh) scale(1.03) !important; }
+.r-cutter.drag-over {
+  background: linear-gradient(180deg, #ffb0b0, #ff7070) !important;
+  border-color: #d63030 !important;
+  transform: scale(1.05);
+}
+
 .r-trash {
   background: #d6d6d6 !important;
   border: 0.3vh solid var(--c-line) !important;
@@ -768,56 +791,203 @@ body {
   border-color: #d63030 !important;
 }
 
-/* ── BĂNG CHUYỀN (thay máy scan) - có animation ── */
-.r-scanner {
-  background: #4fd0e8 !important;
+/* ── BĂNG CHUYỀN HÌNH C (chữ U nằm ngang, ngược kim đồng hồ) ── */
+.r-conveyor {
+  background: #e8e4f0 !important;
   border: 0.3vh solid var(--c-line) !important;
   box-shadow: 0 0.4vh 0 var(--c-line), 0 0.5vh 1vh var(--c-shadow);
-  color: var(--c-ink) !important;
-  flex-direction: column;
+  border-radius: 1.2vh !important;
   position: relative;
-  padding: 0.6vh;
-  gap: 0.3vh;
   overflow: hidden;
+  padding: 0.4vh !important;
 }
-.r-scanner::before {
-  content: '';
+.conv-svg {
   position: absolute;
-  left: 0; right: 0;
-  top: 50%;
-  height: 35%;
-  transform: translateY(-50%);
-  background:
-    repeating-linear-gradient(
-      90deg,
-      #2d2a3a 0,
-      #2d2a3a 1.5vh,
-      #4a4658 1.5vh,
-      #4a4658 3vh
-    );
-  border-top: 0.25vh solid var(--c-line);
-  border-bottom: 0.25vh solid var(--c-line);
-  animation: beltScroll 1.2s linear infinite;
+  inset: 0.4vh;
+  width: calc(100% - 0.8vh);
+  height: calc(100% - 0.8vh);
   z-index: 1;
 }
-.r-scanner > * { position: relative; z-index: 2; }
-.r-scanner .conv-icon {
-  font-size: clamp(16px, 3vh, 32px);
-  filter: drop-shadow(0 0.2vh 0.3vh rgba(0,0,0,.3));
+/* Animation: belt scrolling */
+.belt-anim-left  { animation: beltScrollLeft  1.2s linear infinite; }
+.belt-anim-right { animation: beltScrollRight 1.2s linear infinite; }
+.belt-anim-down  { animation: beltScrollDown  1.2s linear infinite; }
+@keyframes beltScrollLeft  { 0%{transform:translateX(0)} 100%{transform:translateX(-40px)} }
+@keyframes beltScrollRight { 0%{transform:translateX(0)} 100%{transform:translateX(40px)} }
+@keyframes beltScrollDown  { 0%{transform:translateY(0)} 100%{transform:translateY(40px)} }
+
+/* Drag-over highlight cho entry zone */
+.r-conveyor.drag-over { background: #d8e8c4 !important; }
+.r-conveyor.drag-over .conv-entry { fill: #2ec458 !important; opacity: 1; }
+
+/* Container thùng đang chạy trên băng */
+.conv-items {
+  position: absolute; inset: 0;
+  z-index: 5;
+  pointer-events: none;
 }
-.r-scanner .conv-label {
-  font-size: clamp(7px, 1.2vh, 13px);
+.conv-box {
+  position: absolute;
+  width: 12%;
+  aspect-ratio: 1;
+  background: var(--c-card-2);
+  border: 0.3vh solid var(--c-line);
+  border-radius: 0.6vh;
+  box-shadow: 0 0.3vh 0 var(--c-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(10px, 1.8vh, 18px);
   font-weight: 800;
   color: var(--c-ink);
-  background: rgba(255,255,255,.85);
+  transition: left 1.5s linear, top 1.5s linear;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+.conv-box.error {
+  background: #ffd6d6;
+  border-color: #d63030;
+  box-shadow: 0 0.3vh 0 #d63030, 0 0 1.5vh #ff8a8a;
+  animation: convShake 0.6s infinite;
+}
+@keyframes convShake {
+  0%, 100% { transform: translate(-50%, -50%) rotate(0); }
+  25% { transform: translate(-50%, -50%) rotate(-5deg); }
+  75% { transform: translate(-50%, -50%) rotate(5deg); }
+}
+.conv-box .conv-err-badge {
+  position: absolute;
+  top: -1.2vh; left: 50%;
+  transform: translateX(-50%);
+  background: #ff5a5a;
+  color: #fff;
+  font-size: clamp(6px, 1vh, 11px);
+  font-weight: 800;
   padding: 0.2vh 0.8vh;
   border-radius: 999px;
-  border: 0.15vh solid var(--c-line);
+  border: 0.18vh solid var(--c-line);
+  white-space: nowrap;
+  font-family: 'Fredoka', sans-serif;
 }
-@keyframes beltScroll {
-  0%   { background-position: 0 0; }
-  100% { background-position: -3vh 0; }
+
+/* Bỏ animation cũ của r-scanner — đã thay bằng .r-conveyor */
+.r-scanner { display: none !important; }
+
+/* ── BIKE GRIDS (container giống grid của thùng) ── */
+.bike-grid {
+  background: #fef0d4;
+  border: 0.3vh solid #2d2a3a;
+  border-radius: 0.8vh;
+  box-shadow: 0 0.35vh 0 #2d2a3a, inset 0 0.2vh 0.4vh rgba(0,0,0,.05);
+  padding: 0.4vh;
+  display: grid;
+  gap: 0.3vh;
+  z-index: 5;
+  position: relative;
 }
+/* Cargo: 1 hàng × 7 cột, slot lấp đầy bằng nhau */
+.bike-grid-cargo {
+  grid-template-columns: repeat(7, 1fr);
+  grid-template-rows: 1fr;
+  background: #fdebc7;
+}
+/* Deck (bửng): 2 hàng × 3 cột */
+.bike-grid-deck {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  background: #ffe8c4;
+  border-color: #b88a3a;
+  box-shadow: 0 0.35vh 0 #b88a3a, inset 0 0.2vh 0.4vh rgba(0,0,0,.05);
+}
+/* Hook: 3 hàng × 1 cột */
+.bike-grid-hook {
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(3, 1fr);
+  background: #e8e0f0;
+  border-color: #6a6ab8;
+  border-style: dashed;
+  box-shadow: 0 0.35vh 0 #6a6ab8;
+  padding: 0.3vh;
+}
+
+/* Ô con trong grid — lấp đầy cell grid (không có aspect-ratio fix) */
+.bike-slot {
+  background: #fef0d4 !important;
+  border: 0.15vh solid #d4a574 !important;
+  border-radius: 0.3vh !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(7px, 1.3vh, 14px);
+  color: #2d2a3a;
+  font-weight: 700;
+  transition: background .12s, border-color .12s;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+.bike-slot::before { content: ''; }
+.bike-slot.drag-target {
+  background: #6dd96d !important;
+  border-color: #1a6a2a !important;
+}
+.bike-slot.drag-invalid {
+  background: #ff9090 !important;
+  border-color: #c63030 !important;
+}
+.bike-slot.filled {
+  background: var(--c-accent-2) !important;
+  border-color: var(--c-line) !important;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(10px, 2vh, 22px);
+}
+/* Horizontal (cargo, deck) - bo head trái, tail phải, middle bỏ border ngang */
+.bike-slot.filled-head {
+  border-top-left-radius: 0.5vh !important;
+  border-bottom-left-radius: 0.5vh !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-right: 0 !important;
+}
+.bike-slot.filled-tail {
+  border-top-right-radius: 0.5vh !important;
+  border-bottom-right-radius: 0.5vh !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-left: 0 !important;
+}
+.bike-slot.filled-middle {
+  border-radius: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+}
+/* Vertical (hook) - bo head trên, tail dưới, middle bỏ border ngang trên/dưới */
+.bike-slot.filled-head-v {
+  border-top-left-radius: 0.5vh !important;
+  border-top-right-radius: 0.5vh !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-bottom: 0 !important;
+}
+.bike-slot.filled-tail-v {
+  border-bottom-left-radius: 0.5vh !important;
+  border-bottom-right-radius: 0.5vh !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-top: 0 !important;
+}
+.bike-slot.filled-middle-v {
+  border-radius: 0 !important;
+  border-top: 0 !important;
+  border-bottom: 0 !important;
+}
+
+/* Specific tint cho từng loại grid */
+.bike-grid-cargo .bike-slot:not(.filled) { background: #fef0d4 !important; border-color: #d4a574 !important; }
+.bike-grid-deck .bike-slot:not(.filled)  { background: #fff3d8 !important; border-color: #b88a3a !important; }
+.bike-grid-hook .bike-slot:not(.filled)  { background: #f0eafa !important; border-color: #8a8ac8 !important; }
 
 /* ── Stickers chung ── */
 .sticker-icon { font-size: clamp(10px, 2.2vh, 26px); margin-bottom: 0.2vh; }
@@ -945,38 +1115,7 @@ body {
   filter: drop-shadow(0 0.4vh 0.6vh rgba(45,42,58,.15));
 }
 
-.bike-slot {
-  background: rgba(200, 239, 184, 0.92) !important;
-  border: 0.25vh solid #2d2a3a !important;
-  border-radius: 0.6vh !important;
-  display: flex; align-items: center; justify-content: center;
-  font-size: clamp(7px, 1.1vh, 11px);
-  color: #2d2a3a;
-  font-weight: 700;
-  transition: background .12s, border-color .12s, transform .1s;
-  z-index: 5;
-  box-shadow: 0 0.25vh 0 rgba(45,42,58,.4);
-  position: relative;
-}
-.bike-slot::before {
-  content: '+';
-  font-size: clamp(10px, 2vh, 18px);
-  color: #6a9e5a;
-  opacity: 0.55;
-  font-weight: 800;
-}
-.bike-slot.drag-target {
-  background: #6dd96d !important;
-  border-color: #1a6a2a !important;
-  transform: scale(1.08);
-  box-shadow: 0 0.35vh 0 #1a6a2a;
-}
-.bike-slot.drag-target::before { color: #fff; opacity: 1; }
-.bike-slot.filled {
-  background: #fff8eb !important;
-  border-color: var(--c-line) !important;
-}
-.bike-slot.filled::before { content: ''; }
+/* Old .bike-slot definition replaced by new section below */
 
 /* Nút "Xếp" cam quay về màn 1 — B13:C15 (cột 2-3, hàng 13-15) */
 .r-xep-btn {
@@ -1409,6 +1548,294 @@ body {
   z-index: 50;
 }
 
+/* ── HUD VÀNG (G) ── */
+#gold-hud {
+  position: absolute;
+  top: 0.6vh;
+  right: 9vw;  /* trống chỗ cho CONFIG button */
+  z-index: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.4vh;
+  background: linear-gradient(135deg, #ffe5a0, #ffc964);
+  border: 0.25vh solid var(--c-line);
+  border-radius: 999px;
+  padding: 0.3vh 1.2vh;
+  box-shadow: 0 0.3vh 0 var(--c-line);
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 800;
+  font-size: clamp(8px, 1.4vh, 14px);
+  color: var(--c-ink);
+}
+#gold-hud .gold-icon { font-size: clamp(10px, 1.7vh, 17px); filter: drop-shadow(0 0.15vh 0.2vh rgba(0,0,0,.25)); }
+#gold-hud.flash-red {
+  animation: goldShake .5s ease;
+}
+@keyframes goldShake {
+  0%, 100% { transform: translateX(0); background: linear-gradient(135deg, #ffe5a0, #ffc964); }
+  25% { transform: translateX(-3px); background: linear-gradient(135deg, #ffb0b0, #ff6060); }
+  75% { transform: translateX(3px); background: linear-gradient(135deg, #ffb0b0, #ff6060); }
+}
+
+/* ── POPUP TRỪ -50G (floating số bay lên) ── */
+.gold-loss-float {
+  position: absolute;
+  z-index: 700;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 900;
+  font-size: clamp(14px, 3vh, 28px);
+  color: #d63030;
+  text-shadow: 0 0.2vh 0 #fff, 0 0.3vh 0.5vh rgba(0,0,0,.3);
+  pointer-events: none;
+  animation: goldFloatUp 1.6s ease-out forwards;
+}
+@keyframes goldFloatUp {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+  15% { opacity: 1; transform: translate(-50%, -10px) scale(1.2); }
+  100% { opacity: 0; transform: translate(-50%, -120px) scale(1); }
+}
+
+/* ── POPUP "Thùng chưa SẴN SÀNG" trên băng chuyền ── */
+.conv-error-popup {
+  position: absolute;
+  background: #fff;
+  border: 0.3vh solid #d63030;
+  border-radius: 1.2vh;
+  box-shadow: 0 0.5vh 0 #d63030, 0 0.6vh 1.5vh rgba(45,42,58,.3);
+  padding: 1vh 1.5vh;
+  font-family: 'Fredoka', sans-serif;
+  font-size: clamp(8px, 1.3vh, 13px);
+  font-weight: 700;
+  color: var(--c-ink);
+  z-index: 100;
+  text-align: center;
+  white-space: nowrap;
+  animation: convErrPop .3s ease;
+  pointer-events: none;
+}
+.conv-error-popup .cep-title {
+  color: #d63030;
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 800;
+  margin-bottom: 0.3vh;
+  font-size: clamp(9px, 1.5vh, 15px);
+}
+.conv-error-popup .cep-loss {
+  color: #d63030;
+  font-weight: 800;
+}
+@keyframes convErrPop {
+  0% { opacity: 0; transform: scale(0.6); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ── ANIMATION ĐÓNG NẮP THÙNG (4 flap khép vào giữa) ── */
+.box-flap-anim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  border-radius: 1.2vh;
+  overflow: hidden;
+}
+/* Lớp nắp KHÉP cố định sau khi animation xong — OPAQUE hoàn toàn (kraft đậm)
+   Hiển thị: nền kraft + dấu chữ thập (2 đường chia 4 flap) + băng keo vàng ngang giữa */
+.box-flap-closed {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 49;
+  border-radius: 1.2vh;
+  overflow: hidden;
+  /* Nền kraft opaque (KHÔNG transparent) */
+  background-color: #c89765;
+  background-image:
+    /* Vạch dọc giữa */
+    linear-gradient(0deg, transparent 49.4%, rgba(45,42,58,.55) 49.4%, rgba(45,42,58,.55) 50.6%, transparent 50.6%),
+    /* Vạch ngang giữa */
+    linear-gradient(90deg, transparent 49.4%, rgba(45,42,58,.55) 49.4%, rgba(45,42,58,.55) 50.6%, transparent 50.6%),
+    /* Gradient nhẹ tạo chiều sâu kraft */
+    linear-gradient(135deg, #d4a574 0%, #c89765 50%, #b8845a 100%);
+  border: 0.25vh solid #2d2a3a;
+  box-shadow: inset 0 0 1.5vh rgba(0,0,0,.18);
+}
+/* Băng keo vàng ngang giữa */
+.box-flap-closed::before {
+  content: '';
+  position: absolute;
+  top: 47%;
+  left: -2%;
+  right: -2%;
+  height: 6%;
+  background: linear-gradient(180deg, #ffe770, #ffc940);
+  border-top: 0.15vh solid #a87a20;
+  border-bottom: 0.15vh solid #a87a20;
+  z-index: 1;
+}
+
+.box-flap {
+  position: absolute;
+  background: linear-gradient(135deg, #d4a574, #b8845a);
+  border: 0.2vh solid #2d2a3a;
+  box-shadow: inset 0 0 0.6vh rgba(0,0,0,.15);
+}
+.box-flap.flap-top {
+  top: 0; left: 0; right: 0; height: 50%;
+  transform-origin: top center;
+  transform: rotateX(-90deg);
+  animation: flapTop .55s ease-out forwards .1s;
+}
+.box-flap.flap-bottom {
+  bottom: 0; left: 0; right: 0; height: 50%;
+  transform-origin: bottom center;
+  transform: rotateX(90deg);
+  animation: flapBottom .55s ease-out forwards .1s;
+}
+.box-flap.flap-left {
+  top: 0; bottom: 0; left: 0; width: 50%;
+  transform-origin: left center;
+  transform: rotateY(90deg);
+  animation: flapLeft .55s ease-out forwards .35s;
+}
+.box-flap.flap-right {
+  top: 0; bottom: 0; right: 0; width: 50%;
+  transform-origin: right center;
+  transform: rotateY(-90deg);
+  animation: flapRight .55s ease-out forwards .35s;
+}
+@keyframes flapTop    { to { transform: rotateX(0); } }
+@keyframes flapBottom { to { transform: rotateX(0); } }
+@keyframes flapLeft   { to { transform: rotateY(0); } }
+@keyframes flapRight  { to { transform: rotateY(0); } }
+
+/* Reverse: flap đang khép → mở ra (cho Dao rọc giấy) */
+.box-flap.flap-open.flap-top    { transform: rotateX(0); animation: flapOpenTop .55s ease-in forwards; }
+.box-flap.flap-open.flap-bottom { transform: rotateX(0); animation: flapOpenBottom .55s ease-in forwards; }
+.box-flap.flap-open.flap-left   { transform: rotateY(0); animation: flapOpenLeft .55s ease-in forwards .25s; }
+.box-flap.flap-open.flap-right  { transform: rotateY(0); animation: flapOpenRight .55s ease-in forwards .25s; }
+@keyframes flapOpenTop    { to { transform: rotateX(-90deg); } }
+@keyframes flapOpenBottom { to { transform: rotateX(90deg); } }
+@keyframes flapOpenLeft   { to { transform: rotateY(90deg); } }
+@keyframes flapOpenRight  { to { transform: rotateY(-90deg); } }
+
+/* Tape strip xuất hiện sau khi 4 flap khép */
+.box-tape-strip {
+  position: absolute;
+  top: 47%;
+  left: -2%;
+  right: -2%;
+  height: 6%;
+  background: linear-gradient(180deg, #ffe770, #ffc940);
+  border-top: 0.15vh solid #a87a20;
+  border-bottom: 0.15vh solid #a87a20;
+  opacity: 0;
+  animation: tapeAppear .35s ease forwards .85s;
+  z-index: 51;
+}
+@keyframes tapeAppear {
+  from { opacity: 0; transform: scaleX(0); }
+  to { opacity: 0.95; transform: scaleX(1); }
+}
+
+/* ── STICKER ĐÃ DÁN LÊN THÙNG (vị trí tự do) ── */
+.box-applied-sticker {
+  position: absolute;
+  width: clamp(18px, 3.5vh, 34px);
+  height: clamp(18px, 3.5vh, 34px);
+  border-radius: 0.6vh;
+  border: 0.2vh solid #2d2a3a;
+  box-shadow: 0 0.25vh 0 #2d2a3a, 0 0.3vh 0.6vh rgba(0,0,0,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(11px, 2vh, 20px);
+  z-index: 52;
+  user-select: none;
+  pointer-events: auto;
+  transform: translate(-50%, -50%) rotate(var(--rot, 0deg));
+  transition: transform .15s;
+  animation: stickerAppear .25s ease;
+}
+.box-applied-sticker:hover { transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1.1); }
+@keyframes stickerAppear {
+  from { opacity: 0; transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(0.3); }
+  to   { opacity: 1; transform: translate(-50%, -50%) rotate(var(--rot, 0deg)) scale(1); }
+}
+.box-applied-sticker[data-stk="stk_breakable"]  { background: #ff7070; }
+.box-applied-sticker[data-stk="stk_flammable"]  { background: #ff9a4f; }
+.box-applied-sticker[data-stk="stk_heavy"]      { background: #5dd95d; }
+.box-applied-sticker[data-stk="stk_keepdry"]    { background: #4fd0e8; }
+.box-applied-sticker[data-stk="stk_radioactive"]{ background: #ffe04a; color: #2d2a3a; }
+.box-applied-sticker[data-stk="stk_chemical"]   { background: #c8a0e0; color: #fff; }
+
+/* ── PLACEHOLDER (gợi ý sticker cần dán) — icon mờ + viền gạch đứt ── */
+.box-sticker-placeholder {
+  position: absolute;
+  width: clamp(18px, 3.5vh, 34px);
+  height: clamp(18px, 3.5vh, 34px);
+  border-radius: 0.6vh;
+  border: 0.22vh dashed rgba(45,42,58,.65);
+  background: rgba(255,255,255,.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(11px, 2vh, 20px);
+  z-index: 51; /* dưới sticker đã dán (52) nhưng trên nắp (49) */
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  opacity: 0.55;
+  filter: grayscale(40%);
+  animation: placeholderPulse 1.8s ease-in-out infinite;
+}
+@keyframes placeholderPulse {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(1);
+    border-color: rgba(45,42,58,.45);
+  }
+  50% {
+    opacity: 0.75;
+    transform: translate(-50%, -50%) scale(1.08);
+    border-color: rgba(45,42,58,.85);
+  }
+}
+
+/* Address sticker: lớn hơn, hình chữ nhật, có icon + code */
+.box-applied-sticker.address-sticker {
+  background: #fff;
+  color: #2d2a3a;
+  width: auto;
+  min-width: clamp(34px, 6vh, 64px);
+  height: clamp(18px, 3.5vh, 34px);
+  padding: 0.2vh 0.6vh;
+  border-radius: 0.4vh;
+  display: flex;
+  align-items: center;
+  gap: 0.4vh;
+  font-family: 'Fredoka', sans-serif;
+}
+.box-applied-sticker.address-sticker .addr-icon {
+  font-size: clamp(10px, 1.8vh, 18px);
+  flex-shrink: 0;
+}
+.box-applied-sticker.address-sticker .addr-code {
+  font-family: 'Baloo 2', sans-serif;
+  font-weight: 800;
+  font-size: clamp(8px, 1.4vh, 14px);
+  letter-spacing: 0.1vh;
+}
+
+/* Drop target highlight cho thùng đã taped */
+.spawn-box.sticker-drop-target {
+  outline: 0.3vh dashed var(--c-mint);
+  outline-offset: -0.3vh;
+}
+
+/* Freeze conveyor box (sai trên băng) */
+.conv-box.frozen {
+  animation: convFreezePulse 1s infinite;
+}
+@keyframes convFreezePulse {
+  0%, 100% { box-shadow: 0 0.3vh 0 #d63030, 0 0 1.5vh #ff8a8a; }
+  50% { box-shadow: 0 0.3vh 0 #d63030, 0 0 2.5vh #ff5050; }
+}
+
 </style>
 </head>
 <body>
@@ -1422,6 +1849,13 @@ body {
 
 <div id="game">
   <div id="header-info">🛵 TÀI XẾ KÝ TÀI — PACKING LEVEL 1</div>
+
+  <!-- HUD vàng (G) -->
+  <div id="gold-hud">
+    <span class="gold-icon">🪙</span>
+    <span class="gold-val" id="gold-val">1000</span>
+    <span class="gold-unit">G</span>
+  </div>
 
   <div id="tab-bar">
     <button class="tab-btn active" id="tab-pack" onclick="switchScreen('pack')">📦 Đóng gói</button>
@@ -1473,88 +1907,160 @@ body {
       <div class="region r-box-pick" data-box="box_md" style="grid-column: 32 / span 3; grid-row: 19 / span 3;"></div>
       <div class="region r-box-pick" data-box="box_sm" style="grid-column: 35 / span 3; grid-row: 19 / span 3;"></div>
 
-      <!-- 6 STICKER: Z22:AA24 (2x3), AB22:AC24, AD22:AE24, AF22:AG24, AH22:AI24, AJ22:AK24 -->
+      <!-- 6 STICKER (emoji thống nhất với đơn hàng: 💔🔥🏋💧☢⚗) -->
       <div class="region r-sticker" data-supply="stk_breakable" style="grid-column: 26 / span 2; grid-row: 22 / span 3;">
-        <span class="sticker-icon">📦</span>
-        <span class="sticker-label">Sticker<br>Hàng<br>Dễ Vỡ</span>
+        <span class="sticker-icon">💔</span>
         <span class="sticker-qty">×9</span>
       </div>
       <div class="region r-sticker" data-supply="stk_flammable" style="grid-column: 28 / span 2; grid-row: 22 / span 3;">
         <span class="sticker-icon">🔥</span>
-        <span class="sticker-label">Sticker<br>Hàng<br>Dễ Cháy</span>
         <span class="sticker-qty">×9</span>
       </div>
       <div class="region r-sticker" data-supply="stk_heavy" style="grid-column: 30 / span 2; grid-row: 22 / span 3;">
-        <span class="sticker-icon">📐</span>
-        <span class="sticker-label">Sticker<br>Hàng<br>Cồng Kềnh</span>
+        <span class="sticker-icon">🏋</span>
         <span class="sticker-qty">×9</span>
       </div>
       <div class="region r-sticker" data-supply="stk_keepdry" style="grid-column: 32 / span 2; grid-row: 22 / span 3;">
         <span class="sticker-icon">💧</span>
-        <span class="sticker-label">Sticker<br>Hàng<br>Dễ Ướt</span>
         <span class="sticker-qty">×9</span>
       </div>
       <div class="region r-sticker" data-supply="stk_radioactive" style="grid-column: 34 / span 2; grid-row: 22 / span 3;">
         <span class="sticker-icon">☢</span>
-        <span class="sticker-label">Sticker<br>Hàng<br>Phóng Xạ</span>
         <span class="sticker-qty">×9</span>
       </div>
       <div class="region r-sticker" data-supply="stk_chemical" style="grid-column: 36 / span 2; grid-row: 22 / span 3;">
         <span class="sticker-icon">⚗</span>
-        <span class="sticker-label">Sticker<br>Hàng<br>Hoá Chất</span>
         <span class="sticker-qty">×9</span>
       </div>
 
-      <!-- Mút xốp (3x2): Z25:AB26 -->
+      <!-- Mút xốp -->
       <div class="region r-foam" data-supply="foam" style="grid-column: 26 / span 3; grid-row: 25 / span 2;">
         <span class="sticker-icon">🫧</span>
-        <span class="sticker-label">Mút xốp</span>
         <span class="sticker-qty">×9</span>
       </div>
 
-      <!-- Bubble (2x2): AD25:AE26 -->
+      <!-- Bubble -->
       <div class="region r-bubble" data-supply="bubble" style="grid-column: 30 / span 2; grid-row: 25 / span 2;">
         <span class="sticker-icon">💠</span>
-        <span class="sticker-label">Bubble</span>
         <span class="sticker-qty">×9</span>
       </div>
 
-      <!-- Sticker Address (2x2): AG25:AH26 -->
+      <!-- Sticker Address -->
       <div class="region r-address" data-supply="address" style="grid-column: 33 / span 2; grid-row: 25 / span 2;">
         <span class="sticker-icon">🏷</span>
-        <span class="sticker-label">Sticker<br>Address</span>
         <span class="sticker-qty">×9</span>
       </div>
 
-      <!-- Băng keo (2x2): AJ25:AK26 (cột 36-37, hàng 25-26) -->
+      <!-- Băng keo -->
       <div class="region r-tape" data-supply="duct_tape" style="grid-column: 36 / span 2; grid-row: 25 / span 2;">
         <span class="sticker-icon">🩹</span>
-        <span class="sticker-label">Băng keo</span>
         <span class="sticker-qty">×9</span>
       </div>
 
       <!-- Máy tạo đơn (3x3): AM19:AO21 -->
       <div class="region r-printer" id="printer" style="grid-column: 39 / span 3; grid-row: 19 / span 3;">
-        <span style="font-size:clamp(14px,2.4vh,28px)">🖨</span>
-        <span style="font-size:clamp(6px,1vh,12px);font-weight:800;text-align:center;line-height:1.1">Máy<br>tạo đơn</span>
+        <span style="font-size:clamp(20px,3.6vh,40px)">🖨</span>
       </div>
 
-      <!-- Máy huỷ giấy (3x2): AM22:AO23 -->
-      <div class="region r-shredder" style="grid-column: 39 / span 3; grid-row: 22 / span 2;">
-        <span style="font-size:clamp(12px,2vh,22px)">📄</span>
-        <span style="font-size:clamp(6px,0.95vh,11px);font-weight:700;line-height:1.05">Máy huỷ giấy</span>
+      <!-- Dao rọc giấy (3x2): AM22:AO23 — thay cho Máy huỷ giấy.
+           User drag thùng đã taped vào đây để mở nắp (reset băng keo + sticker + address) -->
+      <div class="region r-cutter" id="cutter" data-supply="cutter" style="grid-column: 39 / span 3; grid-row: 22 / span 2;">
+        <span style="font-size:clamp(18px,3vh,32px)">🔪</span>
       </div>
 
       <!-- Thùng rác (3x2): AM24:AO25 -->
       <div class="region r-trash" id="trash" style="grid-column: 39 / span 3; grid-row: 24 / span 2;">
-        <span style="font-size:clamp(13px,2.2vh,24px)">🗑</span>
-        <span style="font-size:clamp(6px,0.95vh,11px);font-weight:700">Thùng rác</span>
+        <span style="font-size:clamp(18px,3vh,32px)">🗑</span>
       </div>
 
-      <!-- Băng chuyền (7x5): AQ19:AW23 -->
-      <div class="region r-scanner" style="grid-column: 43 / span 7; grid-row: 19 / span 5;">
-        <span class="conv-icon">📦</span>
-        <span class="conv-label">Băng chuyền</span>
+      <!-- ════ BĂNG CHUYỀN HÌNH C (chữ U nằm ngang, ngược kim đồng hồ) ════
+           Vị trí: AQ19:AW23 (col 43-49, row 19-23) = 7 cột × 5 hàng
+           Flow ngược kim đồng hồ:
+           - Vào lề phải-trên (entry: kéo thùng từ pack-zone tới đây)
+           - Đi sang trái (cạnh trên)
+           - Xuống (cạnh trái) — vòng cua
+           - Đi sang phải (cạnh dưới) — ra cổng phải-dưới
+           Nếu thùng đúng: ra cổng → bay sang khu thùng đã xếp (màn 2)
+           Nếu thùng sai: vòng lại từ cạnh dưới lên cạnh trên (loop mãi) + toast
+      ════ -->
+      <div class="region r-conveyor" id="conveyor" style="grid-column: 43 / span 7; grid-row: 19 / span 5;">
+        <svg class="conv-svg" viewBox="0 0 700 500" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Khung băng chuyền chữ C (ngược kim đồng hồ) -->
+          <!-- Cạnh trên (đi sang trái) -->
+          <rect x="40" y="60" width="620" height="90" rx="12"
+                fill="#3a3a4e" stroke="#2d2a3a" stroke-width="4"/>
+          <!-- Cạnh trái (đi xuống) - cong -->
+          <rect x="40" y="60" width="160" height="380" rx="12"
+                fill="#3a3a4e" stroke="#2d2a3a" stroke-width="4"/>
+          <!-- Cạnh dưới (đi sang phải) -->
+          <rect x="40" y="350" width="620" height="90" rx="12"
+                fill="#3a3a4e" stroke="#2d2a3a" stroke-width="4"/>
+
+          <!-- Các thanh trượt (animation belt scrolling) - lớp băng kéo -->
+          <!-- Top belt: chạy sang trái -->
+          <g class="belt-top">
+            <pattern id="beltStripeTop" x="0" y="0" width="40" height="90" patternUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="20" height="90" fill="#2d2a3a"/>
+              <rect x="20" y="0" width="20" height="90" fill="#5a5670"/>
+            </pattern>
+            <rect x="200" y="65" width="455" height="80" fill="url(#beltStripeTop)" class="belt-anim-left"/>
+          </g>
+          <!-- Left belt: chạy xuống -->
+          <g class="belt-left">
+            <pattern id="beltStripeLeft" x="0" y="0" width="80" height="40" patternUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="80" height="20" fill="#2d2a3a"/>
+              <rect x="0" y="20" width="80" height="20" fill="#5a5670"/>
+            </pattern>
+            <rect x="45" y="155" width="150" height="190" fill="url(#beltStripeLeft)" class="belt-anim-down"/>
+          </g>
+          <!-- Bottom belt: chạy sang phải -->
+          <g class="belt-bottom">
+            <pattern id="beltStripeBot" x="0" y="0" width="40" height="90" patternUnits="userSpaceOnUse">
+              <rect x="0" y="0" width="20" height="90" fill="#2d2a3a"/>
+              <rect x="20" y="0" width="20" height="90" fill="#5a5670"/>
+            </pattern>
+            <rect x="200" y="355" width="455" height="80" fill="url(#beltStripeBot)" class="belt-anim-right"/>
+          </g>
+
+          <!-- Cua trái-trên (rounded corner) -->
+          <path d="M 40 100 Q 40 60 80 60" fill="none" stroke="#ffe770" stroke-width="3" stroke-dasharray="6 4"/>
+          <!-- Cua trái-dưới -->
+          <path d="M 80 440 Q 40 440 40 400" fill="none" stroke="#ffe770" stroke-width="3" stroke-dasharray="6 4"/>
+
+          <!-- Mũi tên chỉ hướng (ngược kim đồng hồ) -->
+          <g fill="#ffe770" opacity=".85">
+            <!-- Trên: ← -->
+            <polygon points="380,105 365,95 365,115" />
+            <polygon points="220,105 205,95 205,115" />
+            <!-- Trái: ↓ -->
+            <polygon points="120,250 110,235 130,235" transform="rotate(180,120,250)"/>
+            <polygon points="120,380 110,365 130,365" transform="rotate(180,120,380)"/>
+            <!-- Dưới: → -->
+            <polygon points="320,395 335,405 320,415" />
+            <polygon points="480,395 495,405 480,415" />
+          </g>
+
+          <!-- Cổng vào (entry — phải trên) - drop target -->
+          <rect class="conv-entry" x="600" y="50" width="80" height="110" rx="8"
+                fill="#4fd96b" stroke="#2d2a3a" stroke-width="4" opacity=".85"/>
+          <text x="640" y="115" text-anchor="middle" font-family="Baloo 2, sans-serif"
+                font-weight="800" font-size="20" fill="#fff">VÀO</text>
+
+          <!-- Cổng ra (exit — phải dưới) -->
+          <rect x="600" y="340" width="80" height="110" rx="8"
+                fill="#ffb84d" stroke="#2d2a3a" stroke-width="4" opacity=".85"/>
+          <text x="640" y="405" text-anchor="middle" font-family="Baloo 2, sans-serif"
+                font-weight="800" font-size="18" fill="#2d2a3a">RA →</text>
+
+          <!-- Label trung tâm -->
+          <text x="350" y="265" text-anchor="middle" font-family="Baloo 2, sans-serif"
+                font-weight="800" font-size="22" fill="#2d2a3a" opacity=".55">BĂNG CHUYỀN</text>
+          <text x="350" y="290" text-anchor="middle" font-family="Fredoka, sans-serif"
+                font-weight="600" font-size="13" fill="#2d2a3a" opacity=".4">Kéo thùng vào đây để kiểm tra</text>
+        </svg>
+
+        <!-- Container chứa các thùng đang chạy trên băng chuyền -->
+        <div id="conv-items" class="conv-items"></div>
       </div>
 
       <!-- Nút "Xếp hàng lên xe" (6x2): AQ25:AV26 -->
@@ -1669,46 +2175,74 @@ body {
         </svg>
       </div>
 
-      <!-- 33 slots xanh lá (theo ảnh xe nhìn từ trên xuống) -->
-      <!-- Cụm trên: 3 slot ngang -->
-      <div class="bike-slot" data-bike-slot="front-0" style="grid-column: 35 / span 1; grid-row: 6 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="front-1" style="grid-column: 36 / span 1; grid-row: 6 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="front-2" style="grid-column: 37 / span 1; grid-row: 6 / span 2;"></div>
-      <!-- Hàng 1: 7 slot ngang -->
-      <div class="bike-slot" data-bike-slot="rear-0-0" style="grid-column: 19 / span 1; grid-row: 10 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-0-1" style="grid-column: 20 / span 1; grid-row: 10 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-0-2" style="grid-column: 21 / span 1; grid-row: 10 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-0-3" style="grid-column: 22 / span 1; grid-row: 10 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-0-4" style="grid-column: 23 / span 1; grid-row: 10 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-0-5" style="grid-column: 24 / span 1; grid-row: 10 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-0-6" style="grid-column: 25 / span 1; grid-row: 10 / span 2;"></div>
-      <!-- Cụm giữa phải: 2x3 -->
-      <div class="bike-slot" data-bike-slot="mid-0-0" style="grid-column: 35 / span 1; grid-row: 12 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="mid-0-1" style="grid-column: 36 / span 1; grid-row: 12 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="mid-0-2" style="grid-column: 37 / span 1; grid-row: 12 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="mid-1-0" style="grid-column: 35 / span 1; grid-row: 14 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="mid-1-1" style="grid-column: 36 / span 1; grid-row: 14 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="mid-1-2" style="grid-column: 37 / span 1; grid-row: 14 / span 2;"></div>
-      <!-- Hàng 2 -->
-      <div class="bike-slot" data-bike-slot="rear-1-0" style="grid-column: 19 / span 1; grid-row: 13 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-1-1" style="grid-column: 20 / span 1; grid-row: 13 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-1-2" style="grid-column: 21 / span 1; grid-row: 13 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-1-3" style="grid-column: 22 / span 1; grid-row: 13 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-1-4" style="grid-column: 23 / span 1; grid-row: 13 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-1-5" style="grid-column: 24 / span 1; grid-row: 13 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-1-6" style="grid-column: 25 / span 1; grid-row: 13 / span 2;"></div>
-      <!-- Hàng 3 -->
-      <div class="bike-slot" data-bike-slot="rear-2-0" style="grid-column: 19 / span 1; grid-row: 16 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-2-1" style="grid-column: 20 / span 1; grid-row: 16 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-2-2" style="grid-column: 21 / span 1; grid-row: 16 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-2-3" style="grid-column: 22 / span 1; grid-row: 16 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-2-4" style="grid-column: 23 / span 1; grid-row: 16 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-2-5" style="grid-column: 24 / span 1; grid-row: 16 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="rear-2-6" style="grid-column: 25 / span 1; grid-row: 16 / span 2;"></div>
-      <!-- Cụm dưới: 3 slot ngang -->
-      <div class="bike-slot" data-bike-slot="back-0" style="grid-column: 35 / span 1; grid-row: 20 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="back-1" style="grid-column: 36 / span 1; grid-row: 20 / span 2;"></div>
-      <div class="bike-slot" data-bike-slot="back-2" style="grid-column: 37 / span 1; grid-row: 20 / span 2;"></div>
+      <!-- ════ SLOTS XE — Style grid liền giống thùng hàng tetris ════
+           - Cargo 3 tầng × 7 ô liền: 3 container 1×7
+           - Bửng 2 hàng × 3 ô liền: 1 container 2×3
+           - Móc treo trái: 1 container 3×1 (3 ô dọc)
+           - Móc treo phải: 1 container 3×1
+           Mỗi container là `.bike-grid`, ô con là `.bike-slot`
+      ════ -->
+
+      <!-- CARGO Tầng 1 -->
+      <div class="bike-grid bike-grid-cargo" data-grid-type="cargo" data-grid-row="0"
+           style="grid-column: 19 / span 7; grid-row: 10 / span 2;">
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-0-0"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-0-1"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-0-2"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-0-3"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-0-4"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-0-5"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-0-6"></div>
+      </div>
+      <!-- CARGO Tầng 2 -->
+      <div class="bike-grid bike-grid-cargo" data-grid-type="cargo" data-grid-row="1"
+           style="grid-column: 19 / span 7; grid-row: 13 / span 2;">
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-1-0"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-1-1"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-1-2"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-1-3"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-1-4"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-1-5"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-1-6"></div>
+      </div>
+      <!-- CARGO Tầng 3 -->
+      <div class="bike-grid bike-grid-cargo" data-grid-type="cargo" data-grid-row="2"
+           style="grid-column: 19 / span 7; grid-row: 16 / span 2;">
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-2-0"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-2-1"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-2-2"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-2-3"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-2-4"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-2-5"></div>
+        <div class="bike-slot cargo-slot" data-bike-slot="cargo-2-6"></div>
+      </div>
+
+      <!-- BỬNG 2 hàng × 3 ô -->
+      <div class="bike-grid bike-grid-deck" data-grid-type="deck"
+           style="grid-column: 35 / span 3; grid-row: 12 / span 4;">
+        <div class="bike-slot deck-slot" data-bike-slot="deck-0-0"></div>
+        <div class="bike-slot deck-slot" data-bike-slot="deck-0-1"></div>
+        <div class="bike-slot deck-slot" data-bike-slot="deck-0-2"></div>
+        <div class="bike-slot deck-slot" data-bike-slot="deck-1-0"></div>
+        <div class="bike-slot deck-slot" data-bike-slot="deck-1-1"></div>
+        <div class="bike-slot deck-slot" data-bike-slot="deck-1-2"></div>
+      </div>
+
+      <!-- MÓC TREO TRÁI 3×1 -->
+      <div class="bike-grid bike-grid-hook" data-grid-type="hook" data-grid-side="L"
+           style="grid-column: 17 / span 1; grid-row: 10 / span 8;">
+        <div class="bike-slot hook-slot" data-bike-slot="hook-L-0"></div>
+        <div class="bike-slot hook-slot" data-bike-slot="hook-L-1"></div>
+        <div class="bike-slot hook-slot" data-bike-slot="hook-L-2"></div>
+      </div>
+
+      <!-- MÓC TREO PHẢI 3×1 -->
+      <div class="bike-grid bike-grid-hook" data-grid-type="hook" data-grid-side="R"
+           style="grid-column: 27 / span 1; grid-row: 10 / span 8;">
+        <div class="bike-slot hook-slot" data-bike-slot="hook-R-0"></div>
+        <div class="bike-slot hook-slot" data-bike-slot="hook-R-1"></div>
+        <div class="bike-slot hook-slot" data-bike-slot="hook-R-2"></div>
+      </div>
 
       <!-- bike-rear / bike-front / bike-area - giấu (để JS gốc không lỗi) -->
       <div class="region r-bike-rear" id="bike-rear" style="position:absolute;left:0;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;"></div>
@@ -1928,6 +2462,14 @@ function initState() {
     printedOrders: new Set(), // order ids that have sticky note shown
     stickies: {},       // orderId -> {el, x, y}
     earn: 0,
+    gold: 1000,         // Vàng (G) — bắt đầu 1000, mỗi lần sai băng chuyền -50
+    boxStickerPlacements: {}, // boxKey -> [{stickerType, x, y}]  vị trí % các sticker user đã đặt
+    // ── Bike slots state (drag từ Khu đã xếp vào) ──
+    // Mỗi cell lưu boxKey hoặc null. Một thùng XL (5 ô) chiếm 5 cell liên tiếp với cùng boxKey.
+    bikeCargo: [Array(7).fill(null), Array(7).fill(null), Array(7).fill(null)], // 3 tầng × 7
+    bikeDeck:  [Array(3).fill(null), Array(3).fill(null)],                       // 2 hàng × 3
+    bikeHookL: [null, null, null],
+    bikeHookR: [null, null, null],
   };
 
   // Bin-pack all 30 items into the 14×12 grid (rows × cols).
@@ -2088,6 +2630,30 @@ function renderItemsZone() {
     const piece = buildShelfPiece(item);
     zone.appendChild(piece);
   });
+
+  // Setup drop handler để kéo item từ thùng về kho (chỉ 1 lần)
+  if (!zone._dropHandlerInstalled) {
+    zone.addEventListener('dragover', ev => {
+      if (drag.kind === 'item' && drag.srcGrid && drag.srcGrid !== 'shelf') {
+        ev.preventDefault();
+        zone.classList.add('drag-return');
+      }
+    });
+    zone.addEventListener('dragleave', () => zone.classList.remove('drag-return'));
+    zone.addEventListener('drop', ev => {
+      ev.preventDefault();
+      zone.classList.remove('drag-return');
+      if (drag.kind !== 'item') return;
+      if (!drag.srcGrid || drag.srcGrid === 'shelf') return;  // đã ở kho
+      // Trả item về kho: xoá khỏi tất cả grid trong thùng
+      removeItemFromGrids(drag.itemId);
+      // Re-render
+      drag = {kind:null};
+      renderSpawnedBoxes(); renderItemsZone(); renderStickies(); updateDeliverBtn();
+      showToast('↩ Đã trả item về kho');
+    });
+    zone._dropHandlerInstalled = true;
+  }
 }
 
 function buildShelfPiece(item) {
@@ -2223,11 +2789,7 @@ function renderBoxPickers() {
     }
     el.appendChild(prev);
 
-    const lbl = document.createElement('div');
-    lbl.className='bp-label';
-    lbl.textContent = def.label;
-    el.appendChild(lbl);
-
+    // Bỏ label "4x5" theo yêu cầu — chỉ giữ qty
     const q = document.createElement('div');
     q.className = 'bp-qty';
     if(qty<=0) q.style.color='#555';
@@ -2316,6 +2878,8 @@ function renderSpawnedBoxes() {
 
   const onBike = new Set([...S.rearRows.flat(), ...S.frontRows.flat()]);
   S.spawnedBoxes.forEach(sp => {
+    // Bỏ qua thùng đã qua băng chuyền (chuyển sang Khu đã xếp ở màn 2)
+    if (sp.checkedIn) return;
     const {spawnId, boxKey, x, y} = sp;
     const def = S.boxes[boxKey]; if(!def) return;
     const bs = S.boxState[boxKey] || {};
@@ -2405,6 +2969,7 @@ function setupBoxGrid(el, boxKey, gridData) {
     const cell = document.createElement('div');
     cell.className = 'grid-cell' + (bs.hasFoam?' foam-bg':'');
     cell.dataset.r=r; cell.dataset.c=c;
+    cell.dataset.gridR=r; cell.dataset.gridC=c;
 
     if(gridData[r][c]) {
       const it = getItem(gridData[r][c].id);
@@ -2440,13 +3005,29 @@ function setupBoxGrid(el, boxKey, gridData) {
       const cells = drag.cells || getShapeCells(getItem(drag.itemId));
       const ok = canFit(cells, r, c, gridData);
       ev.preventDefault();
-      cell.classList.toggle('drag-over', ok);
-      cell.classList.toggle('drag-invalid', !ok);
+      // Clear previous shape highlight trong cùng spawn-box
+      el.querySelectorAll('.grid-cell.drag-over, .grid-cell.drag-invalid')
+        .forEach(c2 => c2.classList.remove('drag-over','drag-invalid'));
+      // Highlight tất cả các cell trong shape (theo offset từ origin cell hover)
+      cells.forEach(([dr, dc]) => {
+        const tr = r + dr, tc = c + dc;
+        if (tr < 0 || tc < 0 || tr >= gridData.length || tc >= gridData[0].length) return;
+        const targetCell = el.querySelector(`[data-grid-r="${tr}"][data-grid-c="${tc}"]`);
+        if (targetCell) {
+          targetCell.classList.toggle('drag-over', ok);
+          targetCell.classList.toggle('drag-invalid', !ok);
+        }
+      });
     });
-    cell.addEventListener('dragleave', () => cell.classList.remove('drag-over','drag-invalid'));
+    cell.addEventListener('dragleave', () => {
+      // Clear chỉ khi rời hẳn shape — đơn giản hoá: clear all
+      el.querySelectorAll('.grid-cell.drag-over, .grid-cell.drag-invalid')
+        .forEach(c2 => c2.classList.remove('drag-over','drag-invalid'));
+    });
     cell.addEventListener('drop', ev => {
       ev.preventDefault();
-      cell.classList.remove('drag-over','drag-invalid');
+      el.querySelectorAll('.grid-cell.drag-over, .grid-cell.drag-invalid')
+        .forEach(c2 => c2.classList.remove('drag-over','drag-invalid'));
       if(drag.kind!=='item') return;
       const cells = drag.cells || getShapeCells(getItem(drag.itemId));
       if(!canFit(cells,r,c,gridData)) { showToast('Không vừa!'); return; }
@@ -2474,16 +3055,28 @@ function removeItemFromGrids(itemId) {
 /* ─── Supply drop on box ────────────────────────────────── */
 function setupBoxSupplyDrop(win, boxKey) {
   win.addEventListener('dragover', ev => {
-    if(drag.kind==='supply') ev.preventDefault();
+    if(drag.kind==='supply') {
+      ev.preventDefault();
+      // Highlight nếu là sticker drop
+      if (drag.supplyId && drag.supplyId.startsWith('stk_')) {
+        win.classList.add('sticker-drop-target');
+      }
+    }
   });
+  win.addEventListener('dragleave', () => win.classList.remove('sticker-drop-target'));
   win.addEventListener('drop', ev => {
     ev.preventDefault();
+    win.classList.remove('sticker-drop-target');
     if(drag.kind!=='supply') return;
-    handleSupplyDrop(boxKey, drag.supplyId);
+    // Tính vị trí drop relative to thùng (%)
+    const rect = win.getBoundingClientRect();
+    const xPct = ((ev.clientX - rect.left) / rect.width)  * 100;
+    const yPct = ((ev.clientY - rect.top)  / rect.height) * 100;
+    handleSupplyDrop(boxKey, drag.supplyId, { xPct, yPct });
     drag = {kind:null};
   });
   win.addEventListener('click', ev => {
-    if(ev.target.closest('.sb-x') || ev.target.closest('.cell-item')) return;
+    if(ev.target.closest('.sb-x') || ev.target.closest('.cell-item') || ev.target.closest('.box-applied-sticker')) return;
     const bs = S.boxState[boxKey]; if(!bs) return;
     if(boxHasItems(boxKey) && !bs.addressCode && (bs.status==='sorted'||bs.status==='sealed')) {
       if(S.inventory.address>0) openNumpad({boxKey});
@@ -2492,7 +3085,7 @@ function setupBoxSupplyDrop(win, boxKey) {
   });
 }
 
-function handleSupplyDrop(boxKey, supplyId) {
+function handleSupplyDrop(boxKey, supplyId, dropInfo) {
   const bs = S.boxState[boxKey] || {};
   if(!boxHasItems(boxKey)) { showToast('Thùng trống!'); return; }
   const qty = S.inventory[supplyId]||0;
@@ -2523,16 +3116,30 @@ function handleSupplyDrop(boxKey, supplyId) {
     showToast('✓ Đã dán băng keo');
     updateBoxStatus(boxKey);
     renderSpawnedBoxes(); renderSupplyQtys();
+    // Animation đóng nắp (sau khi render xong)
+    setTimeout(() => playFlapAnimation(boxKey), 50);
     return;
   }
   if(supplyId==='address') {
     if(bs.status!=='sorted' && bs.status!=='sealed') {
       showToast('Cần dán băng keo trước!'); return;
     }
-    openNumpad({boxKey}); return;
+    // Lưu vị trí drop để khi confirm numpad, sticker address bay vào đúng chỗ
+    const x = dropInfo?.xPct != null ? Math.max(12, Math.min(88, dropInfo.xPct)) : 50;
+    const y = dropInfo?.yPct != null ? Math.max(22, Math.min(85, dropInfo.yPct)) : 50;
+    openNumpad({boxKey, addressDropX: x, addressDropY: y});
+    return;
   }
   if(supplyId.startsWith('stk_')) {
     if(bs.stickers.includes(supplyId)) { showToast('Đã dán sticker này!'); return; }
+    // Sticker chỉ dán sau khi đã tape (visual: dán lên nắp thùng đã khép)
+    if(!bs.taped) { showToast('Cần dán băng keo trước khi gắn sticker!'); return; }
+
+    // Lưu vị trí drop user chọn (clamp vào bên trong thùng)
+    const x = dropInfo?.xPct != null ? Math.max(12, Math.min(88, dropInfo.xPct)) : 50;
+    const y = dropInfo?.yPct != null ? Math.max(22, Math.min(85, dropInfo.yPct)) : 50;
+    addStickerPlacement(boxKey, supplyId, x, y);
+
     bs.stickers.push(supplyId);
     S.inventory[supplyId]--;
     showToast('✓ Dán '+STK_EMOJI[supplyId]);
@@ -2821,11 +3428,12 @@ function openNumpad(ctx) {
   [1,2,3,4,5,6,7,8,9,'✕',0,'✓'].forEach(v => {
     const btn = document.createElement('button');
     btn.className='numpad-btn'; btn.textContent=v;
-    if(v==='✓'){btn.style.background='#1a6a2a';btn.style.borderColor='#2ecc71';}
-    if(v==='✕'){btn.style.background='#6a1a1a';btn.style.borderColor='#e94560';}
-    btn.addEventListener('click', () => {
+    if(v==='✓'){btn.style.background='#1a6a2a';btn.style.borderColor='#2ecc71';btn.style.color='#fff';}
+    if(v==='✕'){btn.style.background='#6a1a1a';btn.style.borderColor='#e94560';btn.style.color='#fff';}
+    btn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
       if(v==='✕') numpadValue = numpadValue.slice(0,-1);
-      else if(v==='✓') confirmNumpad();
+      else if(v==='✓') { confirmNumpad(); return; }
       else if(numpadValue.length<3) numpadValue += v;
       document.getElementById('numpad-display').textContent = (numpadValue+'___').slice(0,3);
     });
@@ -2854,6 +3462,17 @@ function confirmNumpad() {
   S.boxState[boxKey].addressCode = numpadValue;
   S.boxState[boxKey].status = 'ready';
   S.inventory.address--;
+
+  // Place address sticker tại vị trí user đã drop (nếu có) — bay vào đúng chỗ
+  const dropX = numpadCtx?.addressDropX;
+  const dropY = numpadCtx?.addressDropY;
+  if (dropX != null && dropY != null) {
+    addStickerPlacement(boxKey, 'address', dropX, dropY);
+  } else {
+    // Fallback: dán ở giữa
+    addStickerPlacement(boxKey, 'address', 50, 50);
+  }
+
   showToast('✓ Dán địa chỉ thành công!');
   closeNumpad();
   renderSpawnedBoxes(); renderSupplyQtys(); renderStickies(); updateDeliverBtn();
@@ -3085,6 +3704,9 @@ window.addEventListener('DOMContentLoaded', () => {
     el.style.background  = ok ? 'rgba(26,74,62,.3)' : 'rgba(74,26,26,.2)';
   }
   function clearHighlight() {
+    // Clear conveyor highlight
+    const convEl = document.getElementById('conveyor');
+    if (convEl) convEl.classList.remove('drag-over');
     if(!lastHighlight) return;
     lastHighlight.style.borderColor = lastHighlight.dataset._prevBorder || '';
     lastHighlight.style.background  = lastHighlight.dataset._prevBg     || '';
@@ -3361,6 +3983,17 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     if(touch.kind==='box-to-bike') {
+      // Conveyor có ưu tiên highlight cao nhất
+      const convEl = document.getElementById('conveyor');
+      if (convEl) {
+        const cr = convEl.getBoundingClientRect();
+        if (cx>=cr.left && cx<=cr.right && cy>=cr.top && cy<=cr.bottom) {
+          convEl.classList.add('drag-over');
+        } else {
+          convEl.classList.remove('drag-over');
+        }
+      }
+
       const rowEl = closest(under, '[ondragover]') ||
                     (under.style?.borderColor !== undefined && closest(under, 'div[style]'));
       /* find the bike row div under finger */
@@ -3471,7 +4104,11 @@ window.addEventListener('DOMContentLoaded', () => {
         const spawnId = box.id.replace('spbox-','');
         const spawnRef = S.spawnedBoxes.find(b=>b.spawnId===spawnId);
         if(spawnRef) {
-          handleSupplyDrop(spawnRef.boxKey, touch.supplyId);
+          // Tính tọa độ touch relative to box (%)
+          const rect = box.getBoundingClientRect();
+          const xPct = ((cx - rect.left) / rect.width)  * 100;
+          const yPct = ((cy - rect.top)  / rect.height) * 100;
+          handleSupplyDrop(spawnRef.boxKey, touch.supplyId, { xPct, yPct });
         }
       }
       drag = {kind:null};
@@ -3494,6 +4131,21 @@ window.addEventListener('DOMContentLoaded', () => {
     /* ── box-to-bike drop ───────────────────────────── */
     if(touch.kind==='box-to-bike') {
       if(touch.srcEl) touch.srcEl.style.opacity='';
+
+      // CHECK CONVEYOR FIRST (highest priority drop target)
+      const convEl = document.getElementById('conveyor');
+      if (convEl) {
+        const cr = convEl.getBoundingClientRect();
+        if (cx>=cr.left && cx<=cr.right && cy>=cr.top && cy<=cr.bottom) {
+          // Drop vào băng chuyền
+          const boxKey = touch.boxKey;
+          drag = {kind:null};
+          resetTouch();
+          handleConveyorDrop(boxKey);
+          return;
+        }
+      }
+
       let dropped = false;
       const bikeRear  = document.getElementById('bike-rear');
       const bikeFront = document.getElementById('bike-front');
@@ -3552,47 +4204,55 @@ function switchScreen(which) {
   }
 }
 
+// Track thùng đã đi qua băng chuyền OK → có trong khu "đã xếp"
+// State: S.boxesValidated (Set of boxKey), S.boxesOnConveyor (array of {boxKey, err})
+// (initialized after initState in boot)
+
 function renderPackedZone() {
   const list = document.getElementById('packed-list');
   if (!list) return;
   list.innerHTML = '';
-  const boxes = (S && S.spawnedBoxes) ? S.spawnedBoxes : [];
-  if (boxes.length === 0) {
-    list.innerHTML = '<div class="pz-empty">Chưa có thùng nào.<br>Hãy đóng gói ở màn trước.</div>';
+  // Chỉ hiển thị thùng đã validate qua băng chuyền VÀ chưa lên xe
+  const validated = (S && S.boxesValidated) ? [...S.boxesValidated] : [];
+  const waiting = validated.filter(boxKey => {
+    const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+    return sp && !sp.onBike;
+  });
+  if (waiting.length === 0) {
+    if (validated.length === 0) {
+      list.innerHTML = '<div class="pz-empty">Chưa có thùng nào đã kiểm tra.<br>Kéo thùng vào băng chuyền ở màn đóng gói.</div>';
+    } else {
+      list.innerHTML = '<div class="pz-empty">✅ Tất cả thùng đã lên xe!</div>';
+    }
     return;
   }
   const BOX_ICONS = { box_xl: '📦', box_lg: '📦', box_md: '📫', box_sm: '🎁' };
-  const BOX_NAMES = { box_xl: 'Thùng XL', box_lg: 'Thùng L', box_md: 'Thùng M', box_sm: 'Thùng S' };
-  boxes.forEach(sp => {
+  waiting.forEach(boxKey => {
+    const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+    if (!sp) return;
+    const def = S.boxes[boxKey];
+    const width = def ? def.cols : 1;
     const card = document.createElement('div');
-    card.className = 'packed-item' + (sp.onBike ? ' on-bike' : '');
+    card.className = 'packed-item';
     card.dataset.spawnId = sp.spawnId;
     card.dataset.boxKey = sp.boxKey;
-    const status = sp.onBike ? ' ✅' : '';
     card.innerHTML = `
       <span class="pi-icon">${BOX_ICONS[sp.boxKey] || '📦'}</span>
-      <span>${BOX_NAMES[sp.boxKey] || sp.boxKey}${status}</span>
+      <span>Rộng <b>${width}ô</b></span>
     `;
-    card.addEventListener('click', () => {
-      switchScreen('pack');
-      setTimeout(() => {
-        const target = document.getElementById('spbox-' + sp.spawnId);
-        if (target) {
-          target.style.transition = 'transform .2s';
-          target.style.transform = 'scale(1.08)';
-          setTimeout(() => { target.style.transform = ''; }, 350);
-        }
-      }, 400);
-    });
     list.appendChild(card);
   });
 }
 
 function checkAutoDeliverPopup() {
-  if (!S || !S.spawnedBoxes || S.spawnedBoxes.length === 0) return;
-  const allOnBike = S.spawnedBoxes.every(sp => sp.onBike);
+  if (!S || !S.spawnedBoxes || !S.boxesValidated || S.boxesValidated.size === 0) return;
+  const validated = [...S.boxesValidated];
+  const allOnBike = validated.every(bk => {
+    const sp = S.spawnedBoxes.find(b => b.boxKey === bk);
+    return sp && sp.onBike;
+  });
   const onBikeScreen = document.getElementById('screens').classList.contains('show-bike');
-  if (allOnBike && onBikeScreen) {
+  if (allOnBike && validated.length > 0 && onBikeScreen) {
     document.getElementById('deliver-popup').classList.add('show');
   } else {
     closeDeliverPopup();
@@ -3601,6 +4261,495 @@ function checkAutoDeliverPopup() {
 function closeDeliverPopup() {
   document.getElementById('deliver-popup').classList.remove('show');
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   🎢 BĂNG CHUYỀN CHỮ C — drop handler + animation
+═══════════════════════════════════════════════════════════════ */
+
+// Path chữ C (ngược kim đồng hồ) trong SVG viewBox 700×500:
+// - Entry (vào): x=640, y=105 (cổng phải-trên)
+// - Đi sang trái dọc cạnh trên: y=105, x: 640→120
+// - Cua xuống: x=120, y: 105→395
+// - Đi sang phải dọc cạnh dưới: y=395, x: 120→640
+// - Exit (ra): x=640, y=395
+// Mỗi đoạn 1.5 giây. Tổng 4.5 giây cho 1 vòng (đúng).
+const CONV_PATH = [
+  { x: 640, y: 105 },  // entry (top-right)
+  { x: 120, y: 105 },  // top-left corner
+  { x: 120, y: 395 },  // bottom-left corner
+  { x: 640, y: 395 },  // exit (bottom-right)
+];
+
+// Wait — bạn nói "thùng đi từ lề đi sang trái ở cạnh trên, đi xuống, đi sang phải ở cạnh dưới"
+// Vậy entry là ở cạnh trên (phía PHẢI vì đi sang trái), exit là phía PHẢI cạnh dưới.
+// Đúng như mô tả CONV_PATH ở trên. Ngược kim đồng hồ ✓
+
+// Lookup item-to-emoji
+const ITEM_EMOJI_FALLBACK = {
+  I: '🍞', O: '🧃', T: '🎁', L: '🧴', J: '🍱', S: '🍫', Z: '☕'
+};
+
+function getBoxEmoji(boxKey) {
+  const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+  if (!sp) return '📦';
+  const map = { box_xl: '📦', box_lg: '📦', box_md: '📫', box_sm: '🎁' };
+  return map[sp.boxKey] || '📦';
+}
+
+// Drop handler cho băng chuyền
+function setupConveyorDropTarget() {
+  const conv = document.getElementById('conveyor');
+  if (!conv) return;
+
+  // Conveyor accepts dragged spawn-box (drag.kind === 'box-to-bike')
+  conv.addEventListener('dragover', e => {
+    if (drag && drag.kind === 'box-to-bike') {
+      e.preventDefault();
+      conv.classList.add('drag-over');
+    }
+  });
+  conv.addEventListener('dragleave', () => conv.classList.remove('drag-over'));
+  conv.addEventListener('drop', e => {
+    e.preventDefault();
+    conv.classList.remove('drag-over');
+    if (drag && drag.kind === 'box-to-bike' && drag.boxKey) {
+      const boxKey = drag.boxKey;
+      drag = { kind: null };
+      handleConveyorDrop(boxKey);
+    }
+  });
+
+  // ── Dao rọc giấy: drag thùng đã taped vào → reset toàn bộ ──
+  const cutter = document.getElementById('cutter');
+  if (cutter) {
+    cutter.addEventListener('dragover', e => {
+      // Cutter chỉ nhận thùng (bất kể trạng thái taped chưa)
+      if (drag && drag.kind === 'box-to-bike') {
+        e.preventDefault();
+        cutter.classList.add('drag-over');
+      }
+    });
+    cutter.addEventListener('dragleave', () => cutter.classList.remove('drag-over'));
+    cutter.addEventListener('drop', e => {
+      e.preventDefault();
+      cutter.classList.remove('drag-over');
+      if (drag && drag.kind === 'box-to-bike' && drag.boxKey) {
+        const boxKey = drag.boxKey;
+        drag = { kind: null };
+        handleCutterOpen(boxKey);
+      }
+    });
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   🔪 DAO RỌC GIẤY — mở thùng đã taped, reset băng keo + sticker + address
+═══════════════════════════════════════════════════════════════ */
+function handleCutterOpen(boxKey) {
+  const bs = S.boxState[boxKey];
+  if (!bs) return;
+  if (!bs.taped) {
+    showToast('Thùng chưa được dán băng keo!');
+    return;
+  }
+  // Hoàn lại supplies: +1 tape, hoàn lại các sticker đã dán, +1 address (nếu có)
+  bs.taped = false;
+  S.inventory.duct_tape++;
+  // Refund stickers
+  (bs.stickers || []).forEach(stk => {
+    S.inventory[stk] = (S.inventory[stk] || 0) + 1;
+  });
+  bs.stickers = [];
+  S.boxStickerPlacements[boxKey] = [];
+  // Refund address (nếu đã dán)
+  if (bs.addressCode) {
+    bs.addressCode = null;
+    S.inventory.address = (S.inventory.address || 0) + 1;
+  }
+  // Cập nhật status
+  updateBoxStatus(boxKey);
+
+  // Animation mở nắp ngược: chạy reverse flap
+  playFlapOpenAnimation(boxKey);
+
+  showToast('🔪 Đã mở thùng — băng keo + sticker + địa chỉ đã hoàn lại');
+  // Re-render sau animation
+  setTimeout(() => {
+    renderSpawnedBoxes();
+    renderSupplyQtys();
+  }, 700);
+}
+
+// Animation flap mở ra (đảo ngược playFlapAnimation)
+function playFlapOpenAnimation(boxKey) {
+  const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+  if (!sp) return;
+  const win = document.getElementById('spbox-' + sp.spawnId);
+  if (!win) return;
+  // Xoá overlay đóng nắp cũ (nếu còn)
+  win.querySelectorAll('.box-flap-anim').forEach(el => el.remove());
+  // Tạo overlay mở: flap bắt đầu khép (rotate 0), animate sang mở (rotate 90)
+  const overlay = document.createElement('div');
+  overlay.className = 'box-flap-anim flap-opening';
+  overlay.innerHTML = `
+    <div class="box-flap flap-top flap-open"></div>
+    <div class="box-flap flap-bottom flap-open"></div>
+    <div class="box-flap flap-left flap-open"></div>
+    <div class="box-flap flap-right flap-open"></div>
+  `;
+  win.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 700);
+}
+
+// Khi thùng được thả vào băng chuyền
+function handleConveyorDrop(boxKey) {
+  const bs = S.boxState[boxKey];
+  if (!bs) return;
+  // Validate đầy đủ: status === 'ready' (= đủ items + sticker + tape + address)
+  const isValid = (bs.status === 'ready') && boxHasItems(boxKey);
+  if (!isValid) {
+    // Thùng SAI → -50G + freeze trên băng + popup
+    chargeGoldLoss(50);
+    showConveyorErrorPopup(boxKey);
+    startConveyorFreeze(boxKey);
+    return;
+  }
+  startConveyorAnimation(boxKey, true);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   💰 GOLD MANAGEMENT
+═══════════════════════════════════════════════════════════════ */
+function updateGoldHUD() {
+  const el = document.getElementById('gold-val');
+  if (el) el.textContent = (S.gold || 0).toString();
+}
+
+function chargeGoldLoss(amount) {
+  S.gold = Math.max(0, (S.gold || 0) - amount);
+  updateGoldHUD();
+  // Shake HUD
+  const hud = document.getElementById('gold-hud');
+  if (hud) {
+    hud.classList.remove('flash-red');
+    void hud.offsetWidth;
+    hud.classList.add('flash-red');
+  }
+  // Floating -50G text bay lên từ băng chuyền
+  spawnGoldFloat('-' + amount + 'G');
+}
+
+function spawnGoldFloat(text) {
+  const conv = document.getElementById('conveyor');
+  if (!conv) return;
+  const rect = conv.getBoundingClientRect();
+  const gameRect = document.getElementById('game').getBoundingClientRect();
+  const x = rect.left - gameRect.left + rect.width / 2;
+  const y = rect.top  - gameRect.top  + rect.height * 0.4;
+  const float = document.createElement('div');
+  float.className = 'gold-loss-float';
+  float.textContent = text;
+  float.style.left = x + 'px';
+  float.style.top  = y + 'px';
+  document.getElementById('game').appendChild(float);
+  setTimeout(() => float.remove(), 1700);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ❄ FREEZE thùng SAI trên băng chuyền
+═══════════════════════════════════════════════════════════════ */
+function startConveyorFreeze(boxKey) {
+  const container = document.getElementById('conv-items');
+  if (!container) return;
+  // Đã có thùng này trên băng rồi? Update -> error
+  let el = container.querySelector(`[data-cbox="${boxKey}"]`);
+  if (el) {
+    // Đã có sẵn (vd: kéo lần 2) → chỉ shake + popup, không tạo lại
+    return;
+  }
+  const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+  const spboxEl = sp ? document.getElementById('spbox-' + sp.spawnId) : null;
+  // KHÔNG ẩn spawn-box — vì thùng sẽ "kẹt" trên băng nhưng vẫn để user pack tiếp
+  // Tạo conv-box ở chính giữa băng chuyền (kẹt, không di chuyển)
+  el = document.createElement('div');
+  el.className = 'conv-box error frozen';
+  el.dataset.cbox = boxKey;
+  el.textContent = getBoxEmoji(boxKey);
+  const badge = document.createElement('div');
+  badge.className = 'conv-err-badge';
+  badge.textContent = '⚠ MÓN SAI';
+  el.appendChild(badge);
+  // Vị trí giữa cạnh trên (entry zone)
+  el.style.left = '50%';
+  el.style.top  = '20%';
+  container.appendChild(el);
+
+  // Click vào thùng để gỡ ra → spawn-box vẫn hiển thị bình thường
+  el.style.pointerEvents = 'auto';
+  el.addEventListener('click', () => {
+    el.remove();
+    showToast('Đã gỡ thùng khỏi băng chuyền — đóng thêm cho đủ rồi thử lại');
+  });
+}
+
+function showConveyorErrorPopup(boxKey) {
+  const conv = document.getElementById('conveyor');
+  if (!conv) return;
+  // Xoá popup cũ nếu có
+  conv.querySelectorAll('.conv-error-popup').forEach(p => p.remove());
+  const bs = S.boxState[boxKey];
+  // Diagnose tại sao sai
+  const reasons = [];
+  if (!boxHasItems(boxKey)) reasons.push('chưa có hàng');
+  else {
+    if (!bs.taped) reasons.push('chưa dán băng keo');
+    else {
+      const needed = getBoxNeededStickers(boxKey);
+      const missing = needed.filter(s => !bs.stickers.includes(s));
+      if (missing.length > 0) reasons.push('thiếu ' + missing.length + ' sticker');
+    }
+    if (!bs.addressCode) reasons.push('chưa dán địa chỉ');
+  }
+  const why = reasons.length > 0 ? reasons.join(', ') : 'không đầy đủ thông tin';
+
+  const popup = document.createElement('div');
+  popup.className = 'conv-error-popup';
+  popup.innerHTML = `
+    <div class="cep-title">⚠ THÙNG CHƯA SẴN SÀNG</div>
+    <div>${why}</div>
+    <div class="cep-loss">-50G</div>
+  `;
+  popup.style.left = '50%';
+  popup.style.top  = '55%';
+  popup.style.transform = 'translate(-50%, -50%)';
+  conv.appendChild(popup);
+  setTimeout(() => popup.remove(), 2400);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   📦 ANIMATION ĐÓNG NẮP THÙNG khi dán băng keo
+   - Animation 4 flap khép vào giữa
+   - Sau khi xong, để lại lớp .box-flap-closed cố định (visual nắp + tape)
+   - Sticker placements được render ĐÈ LÊN nắp (z-index cao hơn)
+═══════════════════════════════════════════════════════════════ */
+function playFlapAnimation(boxKey) {
+  const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+  if (!sp) return;
+  const win = document.getElementById('spbox-' + sp.spawnId);
+  if (!win) return;
+  // Xoá animation/nắp cũ
+  win.querySelectorAll('.box-flap-anim, .box-flap-closed').forEach(el => el.remove());
+  // Tạo animation overlay
+  const overlay = document.createElement('div');
+  overlay.className = 'box-flap-anim';
+  overlay.innerHTML = `
+    <div class="box-flap flap-top"></div>
+    <div class="box-flap flap-bottom"></div>
+    <div class="box-flap flap-left"></div>
+    <div class="box-flap flap-right"></div>
+    <div class="box-tape-strip"></div>
+  `;
+  win.appendChild(overlay);
+  // Sau khi animation xong (~1.4s), replace bằng nắp cố định
+  setTimeout(() => {
+    overlay.remove();
+    addClosedLid(win);
+  }, 1400);
+}
+
+// Thêm nắp khép cố định (sử dụng cho cả render lại spawn-box nếu đã taped)
+function addClosedLid(win) {
+  // Xoá nắp cũ
+  win.querySelectorAll('.box-flap-closed').forEach(el => el.remove());
+  const lid = document.createElement('div');
+  lid.className = 'box-flap-closed';
+  win.appendChild(lid);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   🏷 STICKER PLACEMENT — drag sticker vào thùng đúng vị trí
+═══════════════════════════════════════════════════════════════ */
+// State: S.boxStickerPlacements[boxKey] = [{stickerType, x, y, rot}]
+function addStickerPlacement(boxKey, stickerType, xPct, yPct) {
+  if (!S.boxStickerPlacements[boxKey]) S.boxStickerPlacements[boxKey] = [];
+  // Không cho dán 2 lần cùng loại
+  if (S.boxStickerPlacements[boxKey].some(p => p.stickerType === stickerType)) return false;
+  S.boxStickerPlacements[boxKey].push({
+    stickerType,
+    x: xPct,
+    y: yPct,
+    rot: (Math.random() * 30 - 15).toFixed(0)  // -15 đến +15 độ ngẫu nhiên
+  });
+  return true;
+}
+
+function renderStickerPlacements(boxKey) {
+  const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+  if (!sp) return;
+  const win = document.getElementById('spbox-' + sp.spawnId);
+  if (!win) return;
+  // Xoá các sticker cũ + placeholder cũ
+  win.querySelectorAll('.box-applied-sticker, .box-sticker-placeholder').forEach(el => el.remove());
+
+  const bs = S.boxState[boxKey];
+  // ── 1. Render PLACEHOLDER (mờ, gạch đứt) cho sticker cần dán nhưng chưa dán ──
+  if (bs && bs.taped) {
+    const needed = getBoxNeededStickers(boxKey); // các loại sticker cần dán
+    const stuck  = new Set(bs.stickers || []);    // các loại đã dán
+    const missing = needed.filter(s => !stuck.has(s));
+    if (missing.length > 0) {
+      // Cố định: bottom part canh giữa, xếp ngang
+      // Y = 75% (bottom area dưới băng keo vàng ngang 47-53%)
+      // X: phân bố đều giữa 20% và 80%
+      const yPos = 75;
+      const xStart = 25, xEnd = 75;
+      const step = missing.length > 1 ? (xEnd - xStart) / (missing.length - 1) : 0;
+      missing.forEach((stk, i) => {
+        const x = missing.length === 1 ? 50 : xStart + step * i;
+        const ph = document.createElement('div');
+        ph.className = 'box-sticker-placeholder';
+        ph.dataset.stk = stk;
+        ph.style.left = x + '%';
+        ph.style.top  = yPos + '%';
+        ph.textContent = STK_EMOJI[stk] || '🏷';
+        win.appendChild(ph);
+      });
+    }
+  }
+
+  // ── 2. Render sticker đã dán (đè lên trên placeholder) ──
+  const placements = S.boxStickerPlacements[boxKey] || [];
+  placements.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'box-applied-sticker';
+    el.dataset.stk = p.stickerType;
+    el.style.left = p.x + '%';
+    el.style.top  = p.y + '%';
+    el.style.setProperty('--rot', p.rot + 'deg');
+    let emoji = STK_EMOJI[p.stickerType] || SUPPLY_EMOJI[p.stickerType] || '🏷';
+    if (p.stickerType === 'address') {
+      const bs2 = S.boxState[boxKey];
+      if (bs2 && bs2.addressCode) {
+        el.classList.add('address-sticker');
+        el.innerHTML = `<span class="addr-icon">🏷</span><span class="addr-code">${bs2.addressCode}</span>`;
+      } else {
+        el.textContent = emoji;
+      }
+    } else {
+      el.textContent = emoji;
+    }
+    win.appendChild(el);
+  });
+}
+
+// Animation thùng chạy theo path chữ C
+function startConveyorAnimation(boxKey, isValid) {
+  const container = document.getElementById('conv-items');
+  if (!container) return;
+  // Tránh chạy 2 lần cho cùng 1 thùng
+  if (container.querySelector(`[data-cbox="${boxKey}"]`)) return;
+
+  // Tìm spawn-box element trong pack-zone qua spawnId
+  const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+  const spboxEl = sp ? document.getElementById('spbox-' + sp.spawnId) : null;
+  // Ẩn tạm thùng trong pack-zone trong lúc đang chạy băng
+  if (spboxEl) spboxEl.style.display = 'none';
+
+  // Tạo phần tử thùng trên băng chuyền
+  const el = document.createElement('div');
+  el.className = 'conv-box' + (isValid ? '' : ' error');
+  el.dataset.cbox = boxKey;
+  el.textContent = getBoxEmoji(boxKey);
+  if (!isValid) {
+    const badge = document.createElement('div');
+    badge.className = 'conv-err-badge';
+    badge.textContent = '⚠ MÓN SAI';
+    el.appendChild(badge);
+  }
+  container.appendChild(el);
+
+  function svgToPct(p) {
+    return { left: (p.x / 700) * 100 + '%', top: (p.y / 500) * 100 + '%' };
+  }
+
+  // Start at entry
+  const p0 = svgToPct(CONV_PATH[0]);
+  el.style.left = p0.left; el.style.top = p0.top;
+
+  let pathIdx = 0;
+
+  function moveToNext() {
+    pathIdx++;
+    if (pathIdx >= CONV_PATH.length) {
+      if (isValid) {
+        // ✅ Đúng — biến mất, thêm vào danh sách đã xếp
+        el.style.transition = 'all .4s ease';
+        el.style.opacity = '0';
+        el.style.transform = 'translate(-50%, -50%) scale(1.4)';
+        setTimeout(() => {
+          el.remove();
+          // Đánh dấu validated trước khi remove spawn-box
+          S.boxesValidated.add(boxKey);
+          // Remove spawn-box khỏi pack-zone (đã được "chuyển" sang Khu đã xếp)
+          if (spboxEl) spboxEl.remove();
+          // Đồng thời clear spawnedBoxes để pack-zone không re-render lại
+          // NOTE: KHÔNG clear spawnedBoxes để renderPackedZone vẫn tìm được sp.boxKey
+          // Thay vào đó, đánh dấu sp.checkedIn = true để renderSpawnedBoxes biết bỏ qua
+          if (sp) sp.checkedIn = true;
+          showToast('✅ Thùng đã kiểm tra — chuyển sang Khu đã xếp');
+          renderPackedZone();
+          // Auto chuyển sang tab Lên xe để user thấy ngay
+          setTimeout(() => switchScreen('bike'), 600);
+        }, 400);
+        return;
+      } else {
+        showToast('❌ Thùng sai! Kiểm tra lại items/sticker/address/tape');
+        pathIdx = 0;
+        el.style.transition = 'none';
+        const p = svgToPct(CONV_PATH[0]);
+        el.style.left = p.left; el.style.top = p.top;
+        void el.offsetWidth;
+        el.style.transition = 'left 1.5s linear, top 1.5s linear';
+        setTimeout(moveToNext, 50);
+        return;
+      }
+    }
+    const p = svgToPct(CONV_PATH[pathIdx]);
+    el.style.left = p.left; el.style.top = p.top;
+    setTimeout(moveToNext, 1500);
+  }
+
+  // Click vào thùng lỗi để gỡ ra (cho user thử lại)
+  el.style.pointerEvents = 'auto';
+  el.addEventListener('click', () => {
+    if (!isValid) {
+      el.remove();
+      // Hiện lại thùng trong pack-zone
+      if (spboxEl) spboxEl.style.display = '';
+      showToast('Đã gỡ thùng khỏi băng chuyền');
+    }
+  });
+
+  setTimeout(moveToNext, 50);
+}
+
+// Hook touch drop — khi thùng được kéo bằng touch và thả vào băng chuyền
+// (sử dụng coordinate check trong sb-bar touch handler)
+function checkConveyorTouchDrop(boxKey, clientX, clientY) {
+  const conv = document.getElementById('conveyor');
+  if (!conv) return false;
+  const rect = conv.getBoundingClientRect();
+  if (clientX >= rect.left && clientX <= rect.right &&
+      clientY >= rect.top && clientY <= rect.bottom) {
+    handleConveyorDrop(boxKey);
+    return true;
+  }
+  return false;
+}
+
+// Setup mouse drag từ spawn-box sb-bar để thả vào conveyor
+// (Removed setupSpawnBoxConveyorDrag — conveyor drop now uses global `drag` state
+//  populated by the existing dragstart on .spawn-box that sets drag.kind='box-to-bike')
 
 // Swipe
 (function setupSwipe() {
@@ -3612,7 +4761,7 @@ function closeDeliverPopup() {
   screens.addEventListener('touchstart', e => {
     if (document.querySelector('.dragging')) return;
     const t = e.target;
-    if (t.closest('.shelf-piece, [data-supply], [data-box], .spawn-box, .sb-bar, .sn-header, .cell-item, .r-box-pick, .r-sticker, .r-foam, .r-bubble, .r-address, .r-tape, .grid-cell, .packed-item, button, input, .r-xe-btn, .r-xep-btn, .r-go-bike, .bike-slot')) return;
+    if (t.closest('.shelf-piece, [data-supply], [data-box], .spawn-box, .sb-bar, .sn-header, .cell-item, .r-box-pick, .r-sticker, .r-foam, .r-bubble, .r-address, .r-tape, .grid-cell, .packed-item, button, input, .r-xe-btn, .r-xep-btn, .r-go-bike, .bike-slot, .r-conveyor, .conv-box')) return;
     if (e.touches.length !== 1) return;
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
@@ -3642,12 +4791,28 @@ function closeDeliverPopup() {
   }, { passive: true });
 })();
 
-// Hook renderSpawnedBoxes & renderBikeSlots → update packed list + popup
+// Hook renderSpawnedBoxes & renderBikeSlots
 const _origRenderSpawnedBoxes = renderSpawnedBoxes;
 renderSpawnedBoxes = function() {
   _origRenderSpawnedBoxes.apply(this, arguments);
+  // Cho mỗi thùng: nếu đã taped → thêm nắp cố định + render sticker placements lên trên
+  S.spawnedBoxes.forEach(sp => {
+    const bs = S.boxState[sp.boxKey];
+    if (!bs) return;
+    const win = document.getElementById('spbox-' + sp.spawnId);
+    if (!win) return;
+    if (bs.taped) {
+      if (!win.querySelector('.box-flap-anim') && !win.querySelector('.box-flap-closed')) {
+        addClosedLid(win);
+      }
+    }
+    if (S.boxStickerPlacements[sp.boxKey]) {
+      renderStickerPlacements(sp.boxKey);
+    }
+  });
   renderPackedZone();
   checkAutoDeliverPopup();
+  updateGoldHUD();
 };
 const _origRenderBikeSlots = (typeof renderBikeSlots === 'function') ? renderBikeSlots : null;
 if (_origRenderBikeSlots) {
@@ -3659,10 +4824,360 @@ if (_origRenderBikeSlots) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   🚚 DRAG THÙNG TỪ KHU ĐÃ XẾP → BIKE SLOTS (cargo/deck/hook)
+═══════════════════════════════════════════════════════════════ */
+
+// Render trạng thái filled cho tất cả slot xe
+function renderBikeSlotsUI() {
+  // CARGO: 3 tầng × 7 ô
+  document.querySelectorAll('.bike-grid-cargo').forEach(grid => {
+    const row = parseInt(grid.dataset.gridRow);
+    const slots = grid.querySelectorAll('.bike-slot');
+    const cargoRow = S.bikeCargo[row] || [];
+    slots.forEach((slot, idx) => {
+      slot.className = slot.className.replace(/\bfilled[\w-]*/g, '').trim();
+      slot.textContent = '';
+      const boxKey = cargoRow[idx];
+      if (boxKey) {
+        slot.classList.add('filled');
+        // Đánh dấu vị trí head/middle/tail trong dãy boxKey liên tiếp
+        const prev = cargoRow[idx-1] === boxKey;
+        const next = cargoRow[idx+1] === boxKey;
+        if (!prev && next) slot.classList.add('filled-head');
+        else if (prev && next) slot.classList.add('filled-middle');
+        else if (prev && !next) slot.classList.add('filled-tail');
+        // Chỉ slot đầu hiển thị emoji
+        if (!prev) {
+          slot.textContent = getBoxEmoji(boxKey);
+          slot.dataset.boxKey = boxKey;
+        }
+      }
+    });
+  });
+  // DECK: 2 hàng × 3
+  const deckGrid = document.querySelector('.bike-grid-deck');
+  if (deckGrid) {
+    const slots = deckGrid.querySelectorAll('.bike-slot');
+    let i = 0;
+    for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) {
+      const slot = slots[i++];
+      slot.className = slot.className.replace(/\bfilled[\w-]*/g, '').trim();
+      slot.textContent = '';
+      const boxKey = S.bikeDeck[r][c];
+      if (boxKey) {
+        slot.classList.add('filled');
+        const prev = S.bikeDeck[r][c-1] === boxKey;
+        const next = S.bikeDeck[r][c+1] === boxKey;
+        if (!prev && next) slot.classList.add('filled-head');
+        else if (prev && next) slot.classList.add('filled-middle');
+        else if (prev && !next) slot.classList.add('filled-tail');
+        if (!prev) slot.textContent = getBoxEmoji(boxKey);
+      }
+    }
+  }
+  // HOOK
+  document.querySelectorAll('.bike-grid-hook').forEach(grid => {
+    const side = grid.dataset.gridSide;
+    const slots = grid.querySelectorAll('.bike-slot');
+    const arr = side === 'L' ? S.bikeHookL : S.bikeHookR;
+    slots.forEach((slot, idx) => {
+      slot.className = slot.className.replace(/\bfilled[\w-]*/g, '').trim();
+      slot.textContent = '';
+      const boxKey = arr[idx];
+      if (boxKey) {
+        slot.classList.add('filled');
+        const prev = arr[idx-1] === boxKey;
+        const next = arr[idx+1] === boxKey;
+        // Hook là grid dọc, dùng head-v/middle-v/tail-v (vertical)
+        if (!prev && next) slot.classList.add('filled-head-v');
+        else if (prev && next) slot.classList.add('filled-middle-v');
+        else if (prev && !next) slot.classList.add('filled-tail-v');
+        if (!prev) slot.textContent = getBoxEmoji(boxKey);
+      }
+    });
+  });
+}
+
+// Lấy box width (số ô chiếm) theo định nghĩa
+function getBoxWidth(boxKey) {
+  const def = S.boxes[boxKey];
+  if (!def) return 1;
+  return def.cols || 1;  // chiều rộng = số cột của thùng (4x5 → 5)
+}
+
+// Check thử có đặt thùng vào hàng cargo, bắt đầu từ ô startCol
+function canPlaceCargo(rowIdx, startCol, boxKey) {
+  const width = getBoxWidth(boxKey);
+  if (startCol + width > 7) return false;
+  const row = S.bikeCargo[rowIdx];
+  for (let c = startCol; c < startCol + width; c++) {
+    if (row[c] !== null) return false;
+  }
+  return true;
+}
+
+// Setup drag từ packed-item (Khu đã xếp ở màn 2)
+function setupPackedItemDrag() {
+  document.querySelectorAll('.packed-item').forEach(card => {
+    card.draggable = true;
+    card.addEventListener('dragstart', ev => {
+      const boxKey = card.dataset.boxKey;
+      if (!boxKey) return;
+      // Không cho drag thùng đã onBike
+      if (isBoxOnBike(boxKey)) {
+        ev.preventDefault();
+        showToast('Thùng đã ở trên xe rồi!');
+        return;
+      }
+      drag = { kind: 'packed-to-bike', boxKey };
+      ev.dataTransfer.effectAllowed = 'move';
+    });
+    card.addEventListener('dragend', () => {
+      if (drag.kind === 'packed-to-bike') drag = { kind: null };
+    });
+  });
+}
+
+// Check xem boxKey đang ở trên bike chưa
+function isBoxOnBike(boxKey) {
+  const onCargo = S.bikeCargo.some(row => row.includes(boxKey));
+  const onDeck = S.bikeDeck.some(row => row.includes(boxKey));
+  const onHook = S.bikeHookL.includes(boxKey) || S.bikeHookR.includes(boxKey);
+  return onCargo || onDeck || onHook;
+}
+
+// Setup drop targets trên slot xe
+function setupBikeSlotsDrop() {
+  // CARGO slots — drop vào ô khởi đầu, check 1×Y liền nhau
+  document.querySelectorAll('.bike-grid-cargo .bike-slot').forEach(slot => {
+    slot.addEventListener('dragover', ev => {
+      if (drag.kind !== 'packed-to-bike') return;
+      ev.preventDefault();
+      const grid = slot.closest('.bike-grid-cargo');
+      const rowIdx = parseInt(grid.dataset.gridRow);
+      const slots = [...grid.querySelectorAll('.bike-slot')];
+      const startCol = slots.indexOf(slot);
+      const width = getBoxWidth(drag.boxKey);
+      const ok = canPlaceCargo(rowIdx, startCol, drag.boxKey);
+      // Highlight Y ô (head + middle + tail)
+      slots.forEach(s => s.classList.remove('drag-target', 'drag-invalid'));
+      for (let i = 0; i < width && startCol + i < 7; i++) {
+        slots[startCol + i].classList.add(ok ? 'drag-target' : 'drag-invalid');
+      }
+    });
+    slot.addEventListener('dragleave', () => {
+      const grid = slot.closest('.bike-grid-cargo');
+      if (grid) grid.querySelectorAll('.bike-slot').forEach(s =>
+        s.classList.remove('drag-target', 'drag-invalid')
+      );
+    });
+    slot.addEventListener('drop', ev => {
+      ev.preventDefault();
+      const grid = slot.closest('.bike-grid-cargo');
+      if (grid) grid.querySelectorAll('.bike-slot').forEach(s =>
+        s.classList.remove('drag-target', 'drag-invalid')
+      );
+      if (drag.kind !== 'packed-to-bike') return;
+      const rowIdx = parseInt(grid.dataset.gridRow);
+      const slots = [...grid.querySelectorAll('.bike-slot')];
+      const startCol = slots.indexOf(slot);
+      const boxKey = drag.boxKey;
+      const width = getBoxWidth(boxKey);
+      drag = { kind: null };
+      if (!canPlaceCargo(rowIdx, startCol, boxKey)) {
+        showToast(`❌ Không đủ ${width} ô liền trống! Thùng được trả về Khu đã xếp`);
+        return;
+      }
+      // Đặt vào
+      for (let c = startCol; c < startCol + width; c++) {
+        S.bikeCargo[rowIdx][c] = boxKey;
+      }
+      // Đánh dấu sp.onBike = true
+      const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+      if (sp) sp.onBike = true;
+      renderBikeSlotsUI();
+      renderPackedZone();
+      checkAutoDeliverPopup();
+      showToast('✓ Đã xếp thùng lên xe');
+    });
+    // Click để gỡ thùng (nếu slot đã filled)
+    slot.addEventListener('click', () => {
+      const grid = slot.closest('.bike-grid-cargo');
+      const rowIdx = parseInt(grid.dataset.gridRow);
+      const slots = [...grid.querySelectorAll('.bike-slot')];
+      const colIdx = slots.indexOf(slot);
+      const boxKey = S.bikeCargo[rowIdx][colIdx];
+      if (!boxKey) return;
+      // Gỡ tất cả ô của thùng này
+      for (let c = 0; c < 7; c++) {
+        if (S.bikeCargo[rowIdx][c] === boxKey) S.bikeCargo[rowIdx][c] = null;
+      }
+      const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+      if (sp) sp.onBike = false;
+      renderBikeSlotsUI();
+      renderPackedZone();
+      showToast('↩ Đã gỡ thùng khỏi xe');
+    });
+  });
+
+  // DECK slots: mỗi hàng 3 ô, thả thùng 1×Y vào ô đầu, check Y ô liền trống
+  document.querySelectorAll('.bike-grid-deck .bike-slot').forEach(slot => {
+    slot.addEventListener('dragover', ev => {
+      if (drag.kind !== 'packed-to-bike') return;
+      ev.preventDefault();
+      const grid = slot.closest('.bike-grid-deck');
+      const slots = [...grid.querySelectorAll('.bike-slot')];
+      const idx = slots.indexOf(slot);
+      const r = Math.floor(idx / 3), c = idx % 3;
+      const width = getBoxWidth(drag.boxKey);
+      // Check: c + width <= 3 và các ô c..c+width-1 đều trống
+      let ok = c + width <= 3;
+      if (ok) for (let i = 0; i < width; i++) if (S.bikeDeck[r][c+i] !== null) { ok = false; break; }
+      // Highlight Y ô liền
+      slots.forEach(s => s.classList.remove('drag-target', 'drag-invalid'));
+      for (let i = 0; i < width && c+i < 3; i++) {
+        slots[r*3 + (c+i)].classList.add(ok ? 'drag-target' : 'drag-invalid');
+      }
+    });
+    slot.addEventListener('dragleave', () => {
+      const grid = slot.closest('.bike-grid-deck');
+      if (grid) grid.querySelectorAll('.bike-slot').forEach(s =>
+        s.classList.remove('drag-target', 'drag-invalid')
+      );
+    });
+    slot.addEventListener('drop', ev => {
+      ev.preventDefault();
+      const grid = slot.closest('.bike-grid-deck');
+      if (grid) grid.querySelectorAll('.bike-slot').forEach(s =>
+        s.classList.remove('drag-target', 'drag-invalid')
+      );
+      if (drag.kind !== 'packed-to-bike') return;
+      const boxKey = drag.boxKey;
+      const width = getBoxWidth(boxKey);
+      drag = { kind: null };
+      const slots = [...grid.querySelectorAll('.bike-slot')];
+      const idx = slots.indexOf(slot);
+      const r = Math.floor(idx / 3), c = idx % 3;
+      let ok = c + width <= 3;
+      if (ok) for (let i = 0; i < width; i++) if (S.bikeDeck[r][c+i] !== null) { ok = false; break; }
+      if (!ok) {
+        showToast(`❌ Không đủ ${width} ô liền trên bửng — trả về Khu đã xếp`);
+        return;
+      }
+      for (let i = 0; i < width; i++) S.bikeDeck[r][c+i] = boxKey;
+      const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+      if (sp) sp.onBike = true;
+      renderBikeSlotsUI();
+      renderPackedZone();
+      checkAutoDeliverPopup();
+      showToast('✓ Đã xếp lên bửng');
+    });
+    slot.addEventListener('click', () => {
+      const grid = slot.closest('.bike-grid-deck');
+      const slots = [...grid.querySelectorAll('.bike-slot')];
+      const idx = slots.indexOf(slot);
+      const r = Math.floor(idx / 3), c = idx % 3;
+      const boxKey = S.bikeDeck[r][c];
+      if (!boxKey) return;
+      // Xoá tất cả ô của thùng này trong hàng r
+      for (let cc = 0; cc < 3; cc++) if (S.bikeDeck[r][cc] === boxKey) S.bikeDeck[r][cc] = null;
+      const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+      if (sp) sp.onBike = false;
+      renderBikeSlotsUI();
+      renderPackedZone();
+      showToast('↩ Đã gỡ thùng khỏi bửng');
+    });
+  });
+
+  // HOOK slots: 3 ô dọc, nhận thùng 1×Y (chiếm Y ô liền nhau)
+  document.querySelectorAll('.bike-grid-hook .bike-slot').forEach(slot => {
+    slot.addEventListener('dragover', ev => {
+      if (drag.kind !== 'packed-to-bike') return;
+      ev.preventDefault();
+      const grid = slot.closest('.bike-grid-hook');
+      const slots = [...grid.querySelectorAll('.bike-slot')];
+      const startIdx = slots.indexOf(slot);
+      const side = grid.dataset.gridSide;
+      const arr = side === 'L' ? S.bikeHookL : S.bikeHookR;
+      const width = getBoxWidth(drag.boxKey);
+      let ok = startIdx + width <= 3;
+      if (ok) for (let i = 0; i < width; i++) if (arr[startIdx+i] !== null) { ok = false; break; }
+      slots.forEach(s => s.classList.remove('drag-target', 'drag-invalid'));
+      for (let i = 0; i < width && startIdx+i < 3; i++) {
+        slots[startIdx+i].classList.add(ok ? 'drag-target' : 'drag-invalid');
+      }
+    });
+    slot.addEventListener('dragleave', () => {
+      const grid = slot.closest('.bike-grid-hook');
+      if (grid) grid.querySelectorAll('.bike-slot').forEach(s =>
+        s.classList.remove('drag-target', 'drag-invalid')
+      );
+    });
+    slot.addEventListener('drop', ev => {
+      ev.preventDefault();
+      const grid = slot.closest('.bike-grid-hook');
+      if (grid) grid.querySelectorAll('.bike-slot').forEach(s =>
+        s.classList.remove('drag-target', 'drag-invalid')
+      );
+      if (drag.kind !== 'packed-to-bike') return;
+      const boxKey = drag.boxKey;
+      const width = getBoxWidth(boxKey);
+      drag = { kind: null };
+      const slots = [...grid.querySelectorAll('.bike-slot')];
+      const startIdx = slots.indexOf(slot);
+      const side = grid.dataset.gridSide;
+      const arr = side === 'L' ? S.bikeHookL : S.bikeHookR;
+      let ok = startIdx + width <= 3;
+      if (ok) for (let i = 0; i < width; i++) if (arr[startIdx+i] !== null) { ok = false; break; }
+      if (!ok) {
+        showToast(`❌ Không đủ ${width} ô liền trên móc treo`);
+        return;
+      }
+      for (let i = 0; i < width; i++) arr[startIdx+i] = boxKey;
+      const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+      if (sp) sp.onBike = true;
+      renderBikeSlotsUI();
+      renderPackedZone();
+      checkAutoDeliverPopup();
+      showToast('✓ Đã treo thùng');
+    });
+    slot.addEventListener('click', () => {
+      const grid = slot.closest('.bike-grid-hook');
+      const slots = [...grid.querySelectorAll('.bike-slot')];
+      const idx = slots.indexOf(slot);
+      const side = grid.dataset.gridSide;
+      const arr = side === 'L' ? S.bikeHookL : S.bikeHookR;
+      const boxKey = arr[idx];
+      if (!boxKey) return;
+      // Xoá tất cả ô của thùng này
+      for (let i = 0; i < 3; i++) if (arr[i] === boxKey) arr[i] = null;
+      const sp = S.spawnedBoxes.find(b => b.boxKey === boxKey);
+      if (sp) sp.onBike = false;
+      renderBikeSlotsUI();
+      renderPackedZone();
+      showToast('↩ Đã gỡ thùng khỏi móc treo');
+    });
+  });
+}
+
+// Hook renderPackedZone để setup drag mỗi khi list re-render
+const _origRenderPackedZone = renderPackedZone;
+renderPackedZone = function() {
+  _origRenderPackedZone.apply(this, arguments);
+  setupPackedItemDrag();
+};
+
+/* ═══════════════════════════════════════════════════════════════
    BOOT
 ═══════════════════════════════════════════════════════════════ */
 initState();
+S.boxesValidated = new Set();
+S.boxesOnConveyor = [];
 renderAll();
+updateGoldHUD();
+setupConveyorDropTarget();
+setupBikeSlotsDrop();
+renderBikeSlotsUI();
 </script>
 </body>
 </html>
